@@ -34,6 +34,16 @@ import org.apache.hudi.common.util.HoodieAvroUtils;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.exception.HoodieIOException;
 
+import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.FileReader;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.Encoder;
+import org.apache.avro.io.EncoderFactory;
+
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -42,6 +52,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
@@ -82,8 +93,16 @@ public class HoodieTestDataGenerator {
       + "{\"name\":\"fare\",\"type\": \"double\"}]}";
   public static String NULL_SCHEMA = Schema.create(Schema.Type.NULL).toString();
   public static String TRIP_HIVE_COLUMN_TYPES = "double,string,string,string,double,double,double,double,double";
-  public static Schema avroSchema = new Schema.Parser().parse(TRIP_EXAMPLE_SCHEMA);
-  public static Schema avroSchemaWithMetadataFields = HoodieAvroUtils.addMetadataFields(avroSchema);
+
+  public static Schema schemafromFile;
+
+
+  static String schemaFile = "/Users/sivabala/Documents/personal/projects/siva_hudi/hudi/hudi-utilities/src/test/resources/delta-streamer-config/source.avsc";
+  static Generator generator = null;
+  static Encoder encoder;
+//  public static Schema avroSchema = new Schema.Parser().parse(TRIP_EXAMPLE_SCHEMA);
+  public static Schema avroSchema;
+  public static Schema avroSchemaWithMetadataFields;
 
   private static Random rand = new Random(46474747);
 
@@ -91,17 +110,53 @@ public class HoodieTestDataGenerator {
   private final String[] partitionPaths;
   private int numExistingKeys;
 
-  public HoodieTestDataGenerator(String[] partitionPaths) {
+  static {
+    try {
+
+     /* File file = new File(schemaFile);
+
+      FileReader<?> reader = DataFileReader.openReader(file, new GenericDatumReader<>());
+      schemafromFile = reader.getSchema();
+      System.out.println(schemafromFile.toString());
+*/
+      avroSchema = new Schema.Parser().parse(new File(schemaFile));
+
+      generator = getGenerator(null, schemaFile);
+    } catch (IOException ioe) {
+      System.err.println("Error occurred while trying to read schema file");
+      System.exit(1);
+    }
+    try {
+      encoder = EncoderFactory.get().jsonEncoder(generator.schema(), System.out, true);
+    } catch (IOException e) {
+      e.printStackTrace();
+      System.exit(1);
+    }
+    avroSchemaWithMetadataFields = HoodieAvroUtils.addMetadataFields(avroSchema);
+  }
+
+  public HoodieTestDataGenerator(String[] partitionPaths){
     this(partitionPaths, new HashMap<>());
   }
 
-  public HoodieTestDataGenerator() {
+  public HoodieTestDataGenerator(){
     this(DEFAULT_PARTITION_PATHS);
   }
 
   public HoodieTestDataGenerator(String[] partitionPaths, Map<Integer, KeyPartition> keyPartitionMap) {
     this.partitionPaths = Arrays.copyOf(partitionPaths, partitionPaths.length);
     this.existingKeys = keyPartitionMap;
+  }
+
+  private static Generator getGenerator(String schema, String schemaFile) throws IOException {
+    if (schema != null) {
+      return new Generator.Builder().schemaString(schema).build();
+    } else if (!schemaFile.equals("-")) {
+      return new Generator.Builder().schemaFile(new File(schemaFile)).build();
+    } else {
+      System.err.println("Reading schema from stdin...");
+      return new Generator.Builder().schemaStream(System.in).build();
+    }
   }
 
   public static void writePartitionMetadata(FileSystem fs, String[] partitionPaths, String basePath) {
@@ -114,7 +169,8 @@ public class HoodieTestDataGenerator {
    * Generates a new avro record of the above schema format, retaining the key if optionally provided.
    */
   public static TestRawTripPayload generateRandomValue(HoodieKey key, String commitTime) throws IOException {
-    GenericRecord rec = generateGenericRecord(key.getRecordKey(), "rider-" + commitTime, "driver-" + commitTime, 0.0);
+   // GenericRecord rec = generateGenericRecord(key.getRecordKey(), "rider-" + commitTime, "driver-" + commitTime, 0.0);
+    GenericRecord rec =  (GenericRecord) generator.generate();
     return new TestRawTripPayload(rec.toString(), key.getRecordKey(), key.getPartitionPath(), TRIP_EXAMPLE_SCHEMA);
   }
 
@@ -122,7 +178,8 @@ public class HoodieTestDataGenerator {
    * Generates a new avro record of the above schema format, retaining the key if optionally provided.
    */
   public static HoodieAvroPayload generateAvroPayload(HoodieKey key, String commitTime) throws IOException {
-    GenericRecord rec = generateGenericRecord(key.getRecordKey(), "rider-" + commitTime, "driver-" + commitTime, 0.0);
+   // GenericRecord rec = generateGenericRecord(key.getRecordKey(), "rider-" + commitTime, "driver-" + commitTime, 0.0);
+    GenericRecord rec = (GenericRecord) generator.generate();
     return new HoodieAvroPayload(Option.of(rec));
   }
 

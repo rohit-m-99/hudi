@@ -177,6 +177,12 @@
       <version>${spark.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>com.github.mifmif</groupId>
+      <artifactId>generex</artifactId>
+      <version>1.0.2</version>
+    </dependency>
+
     <!-- Dropwizard Metrics -->
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
@@ -221,6 +227,12 @@
       <groupId>io.confluent</groupId>
       <artifactId>kafka-schema-registry-client</artifactId>
       <version>3.0.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>1.9.0</version>
     </dependency>
 
     <!-- Httpcomponents -->
@@ -297,6 +309,11 @@
       <version>${hive.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>1.8.1</version>
+    </dependency>
     <!-- Hoodie - Test -->
     <dependency>
       <groupId>org.apache.hudi</groupId>

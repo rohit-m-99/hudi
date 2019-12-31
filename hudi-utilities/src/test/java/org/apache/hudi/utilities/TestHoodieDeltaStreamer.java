@@ -190,7 +190,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
       cfg.enableHiveSync = enableHiveSync;
       cfg.sourceOrderingField = "timestamp";
       cfg.propsFilePath = dfsBasePath + "/" + propsFilename;
-      cfg.sourceLimit = 1000;
+      cfg.sourceLimit = 10;
       if (useSchemaProviderClass) {
         cfg.schemaProviderClassName = FilebasedSchemaProvider.class.getName();
       }
@@ -207,7 +207,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
       cfg.operation = op;
       cfg.sourceOrderingField = "timestamp";
       cfg.propsFilePath = dfsBasePath + "/test-downstream-source.properties";
-      cfg.sourceLimit = 1000;
+      cfg.sourceLimit = 10;
       if (null != schemaProviderClassName) {
         cfg.schemaProviderClassName = schemaProviderClassName;
       }
@@ -337,26 +337,27 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     // Initial bulk insert
     HoodieDeltaStreamer.Config cfg = TestHelpers.makeConfig(datasetBasePath, Operation.BULK_INSERT);
     new HoodieDeltaStreamer(cfg, jsc).sync();
-    TestHelpers.assertRecordCount(1000, datasetBasePath + "/*/*.parquet", sqlContext);
-    TestHelpers.assertDistanceCount(1000, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertRecordCount(10, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertDistanceCount(10, datasetBasePath + "/*/*.parquet", sqlContext);
     TestHelpers.assertCommitMetadata("00000", datasetBasePath, dfs, 1);
 
     // No new data => no commits.
     cfg.sourceLimit = 0;
     new HoodieDeltaStreamer(cfg, jsc).sync();
-    TestHelpers.assertRecordCount(1000, datasetBasePath + "/*/*.parquet", sqlContext);
-    TestHelpers.assertDistanceCount(1000, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertRecordCount(10, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertDistanceCount(10, datasetBasePath + "/*/*.parquet", sqlContext);
     TestHelpers.assertCommitMetadata("00000", datasetBasePath, dfs, 1);
 
     // upsert() #1
-    cfg.sourceLimit = 2000;
+    cfg.sourceLimit = 20;
     cfg.operation = Operation.UPSERT;
     new HoodieDeltaStreamer(cfg, jsc).sync();
-    TestHelpers.assertRecordCount(2000, datasetBasePath + "/*/*.parquet", sqlContext);
-    TestHelpers.assertDistanceCount(2000, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertRecordCount(30, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertDistanceCount(30, datasetBasePath + "/*/*.parquet", sqlContext);
     TestHelpers.assertCommitMetadata("00001", datasetBasePath, dfs, 2);
     List<Row> counts = TestHelpers.countsPerCommit(datasetBasePath + "/*/*.parquet", sqlContext);
-    assertEquals(2000, counts.get(0).getLong(1));
+     assertEquals(20, counts.get(1).getLong(1));
+    assertEquals(30, counts.stream().mapToLong(entry -> entry.getLong(1)).sum());
   }
 
   @Test

@@ -80,6 +80,18 @@
       <version>${project.version}</version>
     </dependency>
 
+        <dependency>
+          <groupId>com.github.mifmif</groupId>
+          <artifactId>generex</artifactId>
+          <version>1.0.2</version>
+        </dependency>
+
+          <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>1.8.2</version>
+          </dependency>
+
     <!-- Logging -->
     <dependency>
       <groupId>log4j</groupId>
