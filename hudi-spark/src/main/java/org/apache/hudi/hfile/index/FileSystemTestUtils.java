@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hudi;
+package org.apache.hudi.hfile.index;
 
 import org.apache.hadoop.fs.Path;
 
@@ -40,13 +40,13 @@ public class FileSystemTestUtils {
     return new Path(InMemoryFileSystem.SCHEME + fileSuffix);
   }*/
 
-  static Path getRandomOuterFSPath() {
+  public static Path getRandomOuterFSPath() {
     String randomFileName = UUID.randomUUID().toString();
     String fileSuffix = COLON + FORWARD_SLASH + TEMP + FORWARD_SLASH + randomFileName;
     return new Path(FILE_SCHEME + fileSuffix);
   }
 
-  static Path getRandomPath() {
+  public static Path getRandomPath() {
     String randomFileName = UUID.randomUUID().toString();
     String fileSuffix = FORWARD_SLASH + TEMP + FORWARD_SLASH + randomFileName;
     return new Path(fileSuffix);

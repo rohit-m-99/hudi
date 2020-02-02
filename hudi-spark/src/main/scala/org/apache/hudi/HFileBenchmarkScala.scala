@@ -22,6 +22,7 @@ import java.io.{File, IOException}
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
+import org.apache.hudi.hfile.index.{FileSystemTestUtils, HFileUtils}
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}

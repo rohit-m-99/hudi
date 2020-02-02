@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hudi;
+package org.apache.hudi.hfile.index;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -87,13 +87,13 @@ public class HFileUtils implements Serializable {
     return (keySize);
   }
 
-  static byte[] getSomeKey(String key) {
-    KeyValue kv = new KeyValue(key.getBytes(),
+  public static byte[] getSomeKey(String key) {
+    KeyValue kv = new KeyValue(Bytes.toBytes(key),
         Bytes.toBytes("family"), Bytes.toBytes("qual"), HConstants.LATEST_TIMESTAMP, KeyValue.Type.Put);
     return kv.getKey();
   }
 
-  static List<byte[]> getKeys(List<String> keys) {
+  public static List<byte[]> getKeys(List<String> keys) {
     List<byte[]> toReturn = new ArrayList<>();
     for (String key : keys) {
       toReturn.add(getSomeKey(key));
@@ -103,7 +103,7 @@ public class HFileUtils implements Serializable {
 
   public static Map<String, String> readAllRecordsSequentially(Path hFilePath, Configuration conf, List<byte[]> keysToLookUp) throws IOException {
     conf.set(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, "true");
-    conf.set("CACHE_DATA_IN_L1","true");
+    conf.set("CACHE_DATA_IN_L1", "true");
     conf.set("hbase.hfile.drop.behind.compaction", "false");
     CacheConfig cacheConf = new CacheConfig(conf);
     FileSystem fileSystem = hFilePath.getFileSystem(conf);
@@ -148,7 +148,7 @@ public class HFileUtils implements Serializable {
 
   public static Map<String, String> readAllRecordsWithSeek(Path hFilePath, Configuration conf, List<byte[]> keysToLookUp) throws IOException {
     conf.set(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, "true");
-    conf.set("CACHE_DATA_IN_L1","true");
+    conf.set("CACHE_DATA_IN_L1", "true");
     conf.set("hbase.hfile.drop.behind.compaction", "false");
     CacheConfig cacheConf = new CacheConfig(conf);
     cacheConf.setCacheDataInL1(true);

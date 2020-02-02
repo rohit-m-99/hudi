@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hudi;
+package org.apache.hudi.hfile.index;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;

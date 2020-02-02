@@ -18,6 +18,9 @@
 
 package org.apache.hudi;
 
+import org.apache.hudi.hfile.index.FileSystemTestUtils;
+import org.apache.hudi.hfile.index.HFileUtils;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -27,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-public class BenchmarkHFileLocal {
+public class BenchMarkHFile {
 
   List<Path> seqPaths;
   List<Path> seekPaths;
@@ -41,17 +44,17 @@ public class BenchmarkHFileLocal {
   Configuration conf;
 
   public static void main(String[] args) throws IOException {
-    BenchmarkHFileLocal benchmarkHFileLocal = new BenchmarkHFileLocal();
-    benchmarkHFileLocal.generateKeys();
-    benchmarkHFileLocal.writeToFiles();
-    benchmarkHFileLocal.readBenchmark();
+    BenchMarkHFile benchMarkHFile = new BenchMarkHFile();
+    benchMarkHFile.generateKeys();
+    benchMarkHFile.writeToFiles();
+    benchMarkHFile.readBenchmark();
   }
 
-  public BenchmarkHFileLocal() {
+  public BenchMarkHFile() {
     this(100, 10000000, 50000);
   }
 
-  public BenchmarkHFileLocal(int buckets, int totalRecords, int totalRecordsToReadPerBucket) {
+  public BenchMarkHFile(int buckets, int totalRecords, int totalRecordsToReadPerBucket) {
     this.buckets = buckets;
     this.totalRecords = totalRecords;
     this.totalRecordsPerBucket = totalRecordsToReadPerBucket;
