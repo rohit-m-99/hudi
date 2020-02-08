@@ -44,8 +44,8 @@ import scala.Tuple2;
 
 public class HFileBucket implements Serializable {
 
-  List<String> hFilePaths;
-  String basePath;
+  private final List<String> hFilePaths;
+  private final String basePath;
   final String filePrefix = "filePrefix";
 
   HFileBucket(String basePath) {
@@ -53,7 +53,7 @@ public class HFileBucket implements Serializable {
     this.hFilePaths = new ArrayList<>();
   }
 
-  public synchronized List<Tuple2<String, Tuple2<String, String>>> getRecordLocation(List<String> recordKeys, boolean scan) throws IOException {
+  public List<Tuple2<String, Tuple2<String, String>>> getRecordLocation(List<String> recordKeys, boolean scan) throws IOException {
     System.out.println("Get reocrd locations in HFileBucket with base path " + basePath.toString());
     hFilePaths.clear();
     File dir = new File(basePath);
@@ -91,7 +91,7 @@ public class HFileBucket implements Serializable {
     return toReturn;
   }
 
-  private synchronized List<Tuple2<String, Tuple2<String, String>>> getRecordLocations(Path path, List<String> recordKeys, boolean scan) throws IOException {
+  private List<Tuple2<String, Tuple2<String, String>>> getRecordLocations(Path path, List<String> recordKeys, boolean scan) throws IOException {
     System.out.println("Starting to fetch record locations for " + path.toString());
     org.apache.hadoop.conf.Configuration conf = new Configuration();
     // conf.set(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, "true");
@@ -173,7 +173,7 @@ public class HFileBucket implements Serializable {
     return keyValuePairs;
   }
 
-  public synchronized boolean insertRecords(List<Tuple2<String, Tuple2<String, String>>> records) {
+  public boolean insertRecords(List<Tuple2<String, Tuple2<String, String>>> records) {
 
     hFilePaths.clear();
     File dir = new File(basePath);
@@ -223,14 +223,14 @@ public class HFileBucket implements Serializable {
       File dir1 = new File(basePath);
       if (dir1.exists()) {
         File[] files = dir.listFiles((dir2, name) -> {
-          System.out.println("Insert records. checking for file name to filter after inserting " + name);
+          System.out.println("After writing records. checking for file name to filter after inserting " + name);
           return name.startsWith("file") && !name.endsWith("crc");
         });
         for (File file : files) {
-          System.out.println("Insert records. Files fetched after insertion " + file.getAbsolutePath());
+          System.out.println("After writing records. Files fetched after insertion " + file.getAbsolutePath());
         }
       } else {
-        System.out.println("Insert records. Dir does not exist after insertion " + basePath.toString());
+        System.out.println("After writing records. Dir does not exist after insertion " + basePath.toString());
       }
 
       return true;

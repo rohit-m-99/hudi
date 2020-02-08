@@ -37,7 +37,7 @@ object TestHashIndexScalaLocal extends Serializable {
 
     println("Starting MAIN " + args.mkString(" "))
 
-    val master = "local[2]"
+    val master = "local[1]"
     val appName = "Bloom Filter trial"
     println("Initializing spark context ")
     // val sparkContext = new SparkContext(master, appName, sparkConf)
