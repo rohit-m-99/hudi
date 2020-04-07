@@ -59,10 +59,7 @@ object HFileBenchmarkScala extends Serializable {
     sparkConf.set("spark.network.timeout", "600s")
     sparkConf.set("spark.eventLog.overwrite", "true")
     sparkConf.set("spark.eventLog.enabled", "false")
-    sparkConf.set("spark.eventLog.dir", "hdfs://ns-platinum-prod-phx/user/spark/applicationHistory")
-    sparkConf.set("spark.yarn.historyServer.address", "http://hadoopcopperrm02-phx2.prod.uber.internal:18088")
-    // sparkConf.set("spark.eventLog.dir","hdfs:///user/spark/applicationHistory")
-    // sparkConf.set("spark.yarn.historyServer.address","http://hadoopneonrm01-dca1:18088")
+    
     sparkConf.set("spark.yarn.max.executor.failures", "100")
     sparkConf.set("spark.sql.catalogImplementation", "hive")
     sparkConf.set("spark.sql.shuffle.partitions", "10")
