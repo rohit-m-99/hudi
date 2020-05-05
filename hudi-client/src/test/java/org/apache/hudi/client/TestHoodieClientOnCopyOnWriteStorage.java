@@ -55,6 +55,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileInputStream;
@@ -127,6 +129,14 @@ public class TestHoodieClientOnCopyOnWriteStorage extends TestHoodieClientBase {
   }
 
   /**
+   * Test Auto Commit behavior for HoodieWriteClient bulk-insert API.
+   */
+  @Test
+  public void testAutoCommitOnBulkInsertRows() throws Exception {
+    testAutoCommitRows(HoodieWriteClient::bulkInsertRows, false);
+  }
+
+  /**
    * Test Auto Commit behavior for HoodieWriteClient bulk-insert prepped API.
    */
   @Test
@@ -151,6 +161,32 @@ public class TestHoodieClientOnCopyOnWriteStorage extends TestHoodieClientBase {
       String newCommitTime = "001";
       int numRecords = 200;
       JavaRDD<WriteStatus> result = insertFirstBatch(cfg, client, newCommitTime, prevCommitTime, numRecords, writeFn,
+          isPrepped, false, numRecords);
+
+      assertFalse(HoodieTestUtils.doesCommitExist(basePath, newCommitTime),
+          "If Autocommit is false, then commit should not be made automatically");
+      assertTrue(client.commit(newCommitTime, result), "Commit should succeed");
+      assertTrue(HoodieTestUtils.doesCommitExist(basePath, newCommitTime),
+          "After explicit commit, commit file should be created");
+    }
+  }
+
+  /**
+   * Test auto-commit by applying write function.
+   *
+   * @param writeFn One of HoodieWriteClient Write API
+   * @throws Exception in case of failure
+   */
+  private void testAutoCommitRows(Function3<JavaRDD<WriteStatus>, HoodieWriteClient, Dataset<Row>, String> writeFn,
+      boolean isPrepped) throws Exception {
+    // Set autoCommit false
+    HoodieWriteConfig cfg = getConfigBuilder().withAutoCommit(false).withIgnoreMetadataFields(false).build();
+    try (HoodieWriteClient client = getHoodieWriteClient(cfg);) {
+
+      String prevCommitTime = "000";
+      String newCommitTime = "001";
+      int numRecords = 30;
+      JavaRDD<WriteStatus> result = insertFirstBatchRows(cfg, client, newCommitTime, prevCommitTime, numRecords, writeFn,
           isPrepped, false, numRecords);
 
       assertFalse(HoodieTestUtils.doesCommitExist(basePath, newCommitTime),

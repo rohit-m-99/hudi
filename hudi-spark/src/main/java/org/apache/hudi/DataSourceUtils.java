@@ -46,6 +46,8 @@ import org.apache.avro.Schema.Field;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -228,6 +230,12 @@ public class DataSourceUtils {
       // default is upsert
       return client.upsert(hoodieRecords, instantTime);
     }
+  }
+
+  public static JavaRDD<WriteStatus> doWriteOperationRows(HoodieWriteClient client, Dataset<Row> rows,
+                                                      String instantTime, String operation) throws HoodieException {
+    // default is upsert
+    return client.bulkInsertRows(rows, instantTime);
   }
 
   public static JavaRDD<WriteStatus> doDeleteOperation(HoodieWriteClient client, JavaRDD<HoodieKey> hoodieKeys,

@@ -38,8 +38,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * HoodieParquetWriter extends the ParquetWriter to help limit the size of underlying file. Provides a way to check if
- * the current file can take more records with the <code>canWrite()</code>
+ * HoodieParquetWriter extends the ParquetWriter to help limit the size of underlying file. Provides a way to check if the current file can take more records with the <code>canWrite()</code>
  */
 public class HoodieParquetWriter<T extends HoodieRecordPayload, R extends IndexedRecord>
     extends ParquetWriter<IndexedRecord> implements HoodieStorageWriter<R> {
@@ -58,7 +57,7 @@ public class HoodieParquetWriter<T extends HoodieRecordPayload, R extends Indexe
       Schema schema, SparkTaskContextSupplier sparkTaskContextSupplier) throws IOException {
     super(HoodieWrapperFileSystem.convertToHoodiePath(file, parquetConfig.getHadoopConf()),
         ParquetFileWriter.Mode.CREATE, parquetConfig.getWriteSupport(), parquetConfig.getCompressionCodecName(),
-        parquetConfig.getBlockSize(), parquetConfig.getPageSize(), parquetConfig.getPageSize(),
+        parquetConfig.getBlockSize(), parquetConfig.getPageSize(), (int) parquetConfig.getMaxFileSize(),
         ParquetWriter.DEFAULT_IS_DICTIONARY_ENABLED, ParquetWriter.DEFAULT_IS_VALIDATING_ENABLED,
         ParquetWriter.DEFAULT_WRITER_VERSION, registerFileSystem(file, parquetConfig.getHadoopConf()));
     this.file = HoodieWrapperFileSystem.convertToHoodiePath(file, parquetConfig.getHadoopConf());
