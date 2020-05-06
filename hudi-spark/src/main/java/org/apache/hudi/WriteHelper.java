@@ -18,18 +18,38 @@
 
 package org.apache.hudi;
 
+import org.apache.hudi.common.config.SerializableConfiguration;
+import org.apache.hudi.common.fs.FSUtils;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+
+import java.io.IOException;
 
 /**
  * test docs.
  */
 public class WriteHelper {
 
-  static Dataset<Boolean> writeToParquet(Dataset<Row> rows, String basePath, ExpressionEncoder<Row> encoder) {
-    return rows.sort("partition", "key")
-        .mapPartitions(new HudiParquetWriter(basePath, encoder), Encoders.BOOLEAN());
+  static Dataset<Boolean> writeToParquet(Dataset<Row> rows, String basePath, ExpressionEncoder<Row> encoder, SerializableConfiguration serConfig) throws IOException {
+
+    try {
+      Path basePathDir = new Path(basePath);
+      final FileSystem fs = FSUtils.getFs(basePath, serConfig.get());
+      if (!fs.exists(basePathDir)) {
+        fs.mkdirs(basePathDir);
+      }
+     /* return rows.sort("key", "partition").coalesce(1)
+          .mapPartitions(new HudiParquetWriter(basePath, encoder, serConfig), Encoders.BOOLEAN());*/
+     return null;
+    } catch (Exception e) {
+      System.err.println("Exception thrown in WriteHelper " + e.getCause() + " ... " + e.getMessage());
+      e.printStackTrace();
+      throw e;
+    }
   }
 }

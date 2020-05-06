@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hudi.DataSourceWriteOptions._
 import org.apache.hudi.client.{HoodieWriteClient, WriteStatus}
-import org.apache.hudi.common.config.TypedProperties
+import org.apache.hudi.common.config.{SerializableConfiguration, TypedProperties}
 import org.apache.hudi.common.fs.FSUtils
 import org.apache.hudi.common.table.HoodieTableMetaClient
 import org.apache.hudi.common.table.timeline.HoodieActiveTimeline
@@ -99,8 +99,10 @@ private[hudi] object HoodieSparkSqlWriter {
     //mapPartitions(new HudiParquetWriter(path.get, sparkContext.hadoopConfiguration), RowEncoder(df.schema));
 
     val dataFrame: Array[Row] = df.collect()
-
-    val writtenRows: Dataset[java.lang.Boolean] = WriteHelper.writeToParquet(df, basePath.toString, RowEncoder(df.schema))
+    val config_ = sparkContext.hadoopConfiguration
+    config_.set("org.apache.spark.sql.parquet.row.attributes", df.schema.toString())
+    val serConfig: SerializableConfiguration = new SerializableConfiguration(sparkContext.hadoopConfiguration)
+    val writtenRows: Dataset[java.lang.Boolean] = WriteHelper.writeToParquet(df, basePath.toString, RowEncoder(df.schema), serConfig)
     writtenRows.collect()
     (true, org.apache.hudi.common.util.Option.of("Completed"))
 
