@@ -116,7 +116,7 @@ public class HoodieTestDataGenerator {
   public static final Schema FLATTENED_AVRO_SCHEMA = new Schema.Parser().parse(TRIP_FLATTENED_SCHEMA);
 
   public static final String TRIP_EXAMPLE_SCHEMA_1_STR =
-      TRIP_SCHEMA_PREFIX.substring(0, TRIP_SCHEMA_PREFIX.length() -1) + "]}";
+      TRIP_SCHEMA_PREFIX.substring(0, TRIP_SCHEMA_PREFIX.length() - 1) + "]}";
   public static final Schema AVRO_SCHEMA_1 = new Schema.Parser().parse(TRIP_EXAMPLE_SCHEMA_1_STR);
 
   private static final Random RAND = new Random(46474747);

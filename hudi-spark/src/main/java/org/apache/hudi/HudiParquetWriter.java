@@ -21,6 +21,7 @@ package org.apache.hudi;
 import org.apache.hudi.common.config.SerializableConfiguration;
 import org.apache.hudi.common.fs.FSUtils;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.hadoop.ParquetWriter;
@@ -30,11 +31,8 @@ import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.execution.datasources.parquet.ParquetWriteSupport;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.UUID;
 
 import static org.apache.parquet.hadoop.ParquetWriter.DEFAULT_COMPRESSION_CODEC_NAME;
@@ -60,43 +58,40 @@ public class HudiParquetWriter implements MapPartitionsFunction<Row, Boolean> {
 
   @Override
   public Iterator<Boolean> call(Iterator<Row> rowIterator) throws Exception {
-    String fileId = UUID.randomUUID().toString();
-    Path basePathDir = new Path(basePath);
-    final FileSystem fs = FSUtils.getFs(basePath, serConfig.get());
-    if (!fs.exists(basePathDir)) {
-      fs.mkdirs(basePathDir);
-    }
-    System.out.println("Resolved path " + fs.resolvePath(basePathDir).toString());
-    Path preFilePath = new Path(fs.resolvePath(basePathDir).toString() + "/" + fileId);
-    System.out.println("File path chosen " + preFilePath.toString());
-
-    List<Row> rows = new ArrayList<>();
-    List<InternalRow> internalRows = new ArrayList<>();
-    while (rowIterator.hasNext()) {
-      Row row = rowIterator.next();
-      rows.add(row);
-      internalRows.add(encoder.toRow(row));
-    }
-    System.out.println("Total records collected " + rows.size());
-    System.out.println("Total records :: " + Arrays.toString(rows.toArray()));
-    System.out.println("Total internal rows :: " + Arrays.toString(internalRows.toArray()));
-    try {
-      System.out.println("resolved path " + preFilePath.toString());
-      ParquetWriter<InternalRow> writer = new ParquetWriter<InternalRow>(preFilePath, new ParquetWriteSupport(), DEFAULT_COMPRESSION_CODEC_NAME, ParquetWriter.DEFAULT_BLOCK_SIZE,
-          DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_IS_DICTIONARY_ENABLED, DEFAULT_IS_VALIDATING_ENABLED, DEFAULT_WRITER_VERSION,
-          serConfig.get());
-
-      int count = 0;
-      for (InternalRow row : internalRows) {
-        System.out.println("Writing Internal row " + (count++) + " :: " + row.toString());
-        writer.write(row);
+    if (rowIterator.hasNext()) {
+      try {
+        String fileId = UUID.randomUUID().toString();
+        Path basePathDir = new Path(basePath);
+        final FileSystem fs = FSUtils.getFs(basePath, serConfig.get());
+        if (!fs.exists(basePathDir)) {
+          fs.mkdirs(basePathDir);
+        }
+        Path preFilePath = new Path(fs.resolvePath(basePathDir).toString() + "/" + fileId);
+        int count = 1;
+        Row firstRow = rowIterator.next();
+        Configuration config = serConfig.get();
+        config.set("spark.sql.parquet.writeLegacyFormat", "false");
+        config.set("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MILLIS");
+        ParquetWriteSupport writeSupport = new ParquetWriteSupport();
+        writeSupport.setSchema(firstRow.schema(), config);
+        ParquetWriter<InternalRow> writer = new ParquetWriter<InternalRow>(preFilePath, writeSupport, DEFAULT_COMPRESSION_CODEC_NAME, ParquetWriter.DEFAULT_BLOCK_SIZE,
+            DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_IS_DICTIONARY_ENABLED, DEFAULT_IS_VALIDATING_ENABLED, DEFAULT_WRITER_VERSION,
+            config);
+        writer.write(encoder.toRow(firstRow));
+        while (rowIterator.hasNext()) {
+          writer.write(encoder.toRow(rowIterator.next()));
+          count++;
+        }
+        writer.close();
+        System.out.println("Total rows for this partition " + count);
+        return Collections.singleton(true).iterator();
+      } catch (Exception e) {
+        System.out.println("Exception thrown while instantiating or writing to Parquet " + e.getMessage() + " ... cause " + e.getCause());
+        e.printStackTrace();
+        throw new IllegalStateException("Exception thrown while instantiating or writing to Parquet " + e.getMessage() + " ... cause " + e.getCause());
       }
-      writer.close();
+    } else {
       return Collections.singleton(true).iterator();
-    } catch (Exception e) {
-      System.out.println("Exception thrown while instantiating or writing to Parquet " + e.getMessage() + " ... cause " + e.getCause());
-      e.printStackTrace();
-      throw new IllegalStateException("Exception thrown while instantiating or writing to Parquet " + e.getMessage() + " ... cause " + e.getCause());
     }
   }
 }

@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -44,11 +43,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.apache.hudi.common.HoodieTestDataGenerator.AVRO_SCHEMA_1;
-import static org.apache.hudi.common.HoodieTestDataGenerator.AVRO_SCHEMA_WITH_METADATA_FIELDS;
 
 public class TestHudiParquetWriter extends HoodieCommonTestHarnessJunit5 {
 
@@ -80,19 +77,19 @@ public class TestHudiParquetWriter extends HoodieCommonTestHarnessJunit5 {
       JavaRDD<GenericRecord> javaRDD = jsc.parallelize(records);
 
       // Trial 1
-      /*Configuration config = jsc.hadoopConfiguration();
-      config.set("org.apache.spark.sql.parquet.row.attributes", AVRO_SCHEMA_1.toString());
+      //Configuration config = jsc.hadoopConfiguration();
+      //config.set("org.apache.spark.sql.parquet.row.attributes", AVRO_SCHEMA_1.toString());
       Dataset<Row> rowDataset = AvroConversionUtils.createDataFrame(javaRDD.rdd(), AVRO_SCHEMA_1.toString(), sqlContext.sparkSession());
       Dataset<Boolean> result = rowDataset.mapPartitions(new HudiParquetWriter(basePath, RowEncoder.apply(rowDataset.schema()),
-          new SerializableConfiguration(config)), Encoders.BOOLEAN());
+          new SerializableConfiguration(jsc.hadoopConfiguration())), Encoders.BOOLEAN());
 
       System.out.println("output 1 " + Arrays.toString(result.collectAsList().toArray()));
-      */
+
 
       // Trial 2
-       JavaRDD<Boolean> result2 = javaRDD.mapPartitions(new HudiParquetWriterJava(basePath, new SerializableConfiguration(jsc.hadoopConfiguration())));
-       System.out.println("output 2 " + Arrays.toString(result2.collect().toArray()));
-    } catch (Exception e){
+      /*JavaRDD<Boolean> result2 = javaRDD.mapPartitions(new HudiParquetWriterJava(basePath, new SerializableConfiguration(jsc.hadoopConfiguration())));
+      System.out.println("output 2 " + Arrays.toString(result2.collect().toArray()));*/
+    } catch (Exception e) {
       e.printStackTrace();
     }
   }

@@ -98,9 +98,6 @@ private[hudi] object HoodieSparkSqlWriter {
     //val writtenRows: Dataset[Boolean] = df.sort("partition", "key").
     //mapPartitions(new HudiParquetWriter(path.get, sparkContext.hadoopConfiguration), RowEncoder(df.schema));
 
-    val dataFrame: Array[Row] = df.collect()
-    val config_ = sparkContext.hadoopConfiguration
-    config_.set("org.apache.spark.sql.parquet.row.attributes", df.schema.toString())
     val serConfig: SerializableConfiguration = new SerializableConfiguration(sparkContext.hadoopConfiguration)
     val writtenRows: Dataset[java.lang.Boolean] = WriteHelper.writeToParquet(df, basePath.toString, RowEncoder(df.schema), serConfig)
     writtenRows.collect()

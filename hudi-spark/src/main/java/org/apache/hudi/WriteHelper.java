@@ -43,9 +43,8 @@ public class WriteHelper {
       if (!fs.exists(basePathDir)) {
         fs.mkdirs(basePathDir);
       }
-     /* return rows.sort("key", "partition").coalesce(1)
-          .mapPartitions(new HudiParquetWriter(basePath, encoder, serConfig), Encoders.BOOLEAN());*/
-     return null;
+      return rows.sort("key", "partition")
+          .mapPartitions(new HudiParquetWriter(basePath, encoder, serConfig), Encoders.BOOLEAN());
     } catch (Exception e) {
       System.err.println("Exception thrown in WriteHelper " + e.getCause() + " ... " + e.getMessage());
       e.printStackTrace();
