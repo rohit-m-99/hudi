@@ -17,6 +17,7 @@
  */
 
 import org.apache.hudi.DataSourceReadOptions;
+import org.apache.hudi.DataSourceTestUtils;
 import org.apache.hudi.DataSourceWriteOptions;
 import org.apache.hudi.HoodieDataSourceHelpers;
 import org.apache.hudi.common.HoodieTestDataGenerator;

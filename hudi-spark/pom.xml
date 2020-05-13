@@ -344,5 +344,22 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>1.19</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>1.19</version>
+    </dependency>
+
+    <!--dependency>
+      <groupId>pl.project13.scala</groupId>
+      <artifactId>sbt-jmh</artifactId>
+      <version>0.3.7</version>
+    </dependency-->
+
   </dependencies>
 </project>

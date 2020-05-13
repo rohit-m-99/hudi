@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import org.apache.hudi.DataSourceTestUtils;
 import org.apache.hudi.DataSourceUtils;
 import org.apache.hudi.DataSourceWriteOptions;
 import org.apache.hudi.client.HoodieWriteClient;
