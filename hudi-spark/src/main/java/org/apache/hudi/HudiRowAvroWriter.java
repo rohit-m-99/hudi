@@ -21,39 +21,28 @@ package org.apache.hudi;
 import org.apache.hudi.common.config.SerializableConfiguration;
 import org.apache.hudi.common.fs.FSUtils;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetWriter;
+import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.InternalRow;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.execution.datasources.parquet.ParquetWriteSupport;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.UUID;
 
-import static org.apache.parquet.hadoop.ParquetWriter.DEFAULT_COMPRESSION_CODEC_NAME;
-import static org.apache.parquet.hadoop.ParquetWriter.DEFAULT_IS_DICTIONARY_ENABLED;
-import static org.apache.parquet.hadoop.ParquetWriter.DEFAULT_IS_VALIDATING_ENABLED;
-import static org.apache.parquet.hadoop.ParquetWriter.DEFAULT_PAGE_SIZE;
-import static org.apache.parquet.hadoop.ParquetWriter.DEFAULT_WRITER_VERSION;
-
-/**
- * test docs.
- */
-public class HudiParquetWriter implements MapPartitionsFunction<Row, Boolean> {
+public class HudiRowAvroWriter implements MapPartitionsFunction<Row, Boolean> {
 
   String basePath;
-  ExpressionEncoder<Row> encoder;
   SerializableConfiguration serConfig;
+  String compressionCodec;
 
-  public HudiParquetWriter(String basePath, ExpressionEncoder<Row> encoder, SerializableConfiguration serConfig) {
+  public HudiRowAvroWriter(String basePath, SerializableConfiguration serConfig, String compressionCodec) {
     this.basePath = basePath;
-    this.encoder = encoder;
     this.serConfig = serConfig;
+    this.compressionCodec = compressionCodec;
   }
 
   @Override
@@ -69,20 +58,16 @@ public class HudiParquetWriter implements MapPartitionsFunction<Row, Boolean> {
         Path preFilePath = new Path(fs.resolvePath(basePathDir).toString() + "/" + fileId);
         int count = 1;
         Row firstRow = rowIterator.next();
-        Configuration config = serConfig.get();
-        config.set("spark.sql.parquet.writeLegacyFormat", "false");
-        config.set("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MILLIS");
-        ParquetWriteSupport writeSupport = new ParquetWriteSupport();
-        writeSupport.setSchema(firstRow.schema(), config);
-        ParquetWriter<InternalRow> writer = new ParquetWriter<InternalRow>(preFilePath, writeSupport, DEFAULT_COMPRESSION_CODEC_NAME, ParquetWriter.DEFAULT_BLOCK_SIZE,
-            DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_IS_DICTIONARY_ENABLED, DEFAULT_IS_VALIDATING_ENABLED, DEFAULT_WRITER_VERSION,
-            config);
-        writer.write(encoder.toRow(firstRow));
+
+        ParquetWriter<Row> parquetWriter =
+            AvroParquetWriter.<Row>builder(preFilePath).withCompressionCodec(CompressionCodecName.fromConf(compressionCodec)).build();
+
+        parquetWriter.write(firstRow);
         while (rowIterator.hasNext()) {
-          writer.write(encoder.toRow(rowIterator.next()));
+          parquetWriter.write(rowIterator.next());
           count++;
         }
-        writer.close();
+        parquetWriter.close();
         System.out.println("Total rows for this partition " + count);
         return Collections.singleton(true).iterator();
       } catch (Exception e) {

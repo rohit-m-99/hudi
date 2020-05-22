@@ -49,6 +49,7 @@ import org.apache.hudi.io.HoodieMergeHandle;
 import org.apache.hudi.table.action.clean.CleanActionExecutor;
 import org.apache.hudi.table.action.HoodieWriteMetadata;
 import org.apache.hudi.table.action.commit.BulkInsertCommitActionExecutor;
+import org.apache.hudi.table.action.commit.BulkInsertCommitActionExecutorRows;
 import org.apache.hudi.table.action.commit.BulkInsertPreppedCommitActionExecutor;
 import org.apache.hudi.table.action.commit.DeleteCommitActionExecutor;
 import org.apache.hudi.table.action.commit.InsertCommitActionExecutor;
@@ -65,6 +66,8 @@ import org.apache.parquet.avro.AvroReadSupport;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -104,6 +107,19 @@ public class HoodieCopyOnWriteTable<T extends HoodieRecordPayload> extends Hoodi
   public HoodieWriteMetadata bulkInsert(JavaSparkContext jsc, String instantTime, JavaRDD<HoodieRecord<T>> records,
       Option<UserDefinedBulkInsertPartitioner> bulkInsertPartitioner) {
     return new BulkInsertCommitActionExecutor<>(jsc, config,
+        this, instantTime, records, bulkInsertPartitioner).execute();
+  }
+
+  @Override
+  public HoodieWriteMetadata bulkInsertV2(JavaSparkContext jsc, String instantTime, Dataset<HoodieRecord<T>> records,
+                                        Option<UserDefinedBulkInsertPartitioner> bulkInsertPartitioner) {
+    return null;
+  }
+
+  @Override
+  public HoodieWriteMetadata bulkInsertRows(JavaSparkContext jsc, String instantTime, Dataset<Row> records,
+                                          Option<UserDefinedBulkInsertPartitioner> bulkInsertPartitioner) {
+    return new BulkInsertCommitActionExecutorRows<>(jsc, config,
         this, instantTime, records, bulkInsertPartitioner).execute();
   }
 

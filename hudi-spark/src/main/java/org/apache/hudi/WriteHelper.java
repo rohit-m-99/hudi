@@ -35,7 +35,8 @@ import java.io.IOException;
  */
 public class WriteHelper {
 
-  static Dataset<Boolean> writeToParquet(Dataset<Row> rows, String basePath, ExpressionEncoder<Row> encoder, SerializableConfiguration serConfig) throws IOException {
+  static Dataset<Boolean> writeToParquet(Dataset<Row> rows, String basePath, ExpressionEncoder<Row> encoder, SerializableConfiguration serConfig, int parallelism,
+                                         boolean useAvro, String compressionCodec) throws IOException {
 
     try {
       Path basePathDir = new Path(basePath);
@@ -43,8 +44,13 @@ public class WriteHelper {
       if (!fs.exists(basePathDir)) {
         fs.mkdirs(basePathDir);
       }
-      return rows.sort("key", "partition")
-          .mapPartitions(new HudiParquetWriter(basePath, encoder, serConfig), Encoders.BOOLEAN());
+      if (!useAvro) {
+        return rows.sort("partition", "key").coalesce(parallelism)
+            .mapPartitions(new HudiRowParquetWriter(basePath, encoder, serConfig, compressionCodec), Encoders.BOOLEAN());
+      } else {
+        return rows.sort("partition", "key").coalesce(parallelism)
+            .mapPartitions(new HudiRowAvroWriter(basePath, serConfig, compressionCodec), Encoders.BOOLEAN());
+      }
     } catch (Exception e) {
       System.err.println("Exception thrown in WriteHelper " + e.getCause() + " ... " + e.getMessage());
       e.printStackTrace();

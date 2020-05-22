@@ -81,6 +81,12 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
   private static final String FINALIZE_WRITE_PARALLELISM = "hoodie.finalize.write.parallelism";
   private static final String DEFAULT_FINALIZE_WRITE_PARALLELISM = DEFAULT_PARALLELISM;
 
+  private static final String RECORD_KEY_FIELD_PROP = "hoodie.datasource.write.recordkey.field";
+  private static final String DEFAULT_RECORD_KEY_FIELD = "uuid";
+
+  private static final String PARTITION_PATH_FIELD_PROP = "hoodie.datasource.write.partitionpath.field";
+  private static final String DEFAULT_PARTITION_PATH_FIELD = "partitionpath";
+
   private static final String EMBEDDED_TIMELINE_SERVER_ENABLED = "hoodie.embed.timeline.server";
   private static final String DEFAULT_EMBEDDED_TIMELINE_SERVER_ENABLED = "false";
 
@@ -220,6 +226,14 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
 
   public int getMaxConsistencyCheckIntervalMs() {
     return Integer.parseInt(props.getProperty(MAX_CONSISTENCY_CHECK_INTERVAL_MS_PROP));
+  }
+
+  public String getRecordKeyFieldProp() {
+    return props.getProperty(RECORD_KEY_FIELD_PROP, DEFAULT_RECORD_KEY_FIELD);
+  }
+
+  public String getPartitionPathFieldProp() {
+    return props.getProperty(PARTITION_PATH_FIELD_PROP, DEFAULT_PARTITION_PATH_FIELD);
   }
 
   /**

@@ -129,12 +129,14 @@ public class HoodieJavaApp {
     DataFrameWriter<Row> writer = inputDF1.write().format("org.apache.hudi")
         // any hoodie client config can be passed like this
         .option("hoodie.insert.shuffle.parallelism", "2")
+        .option("hoodie.bulkinsert.shuffle.parallelism", "2")
+        .option("hoodie.bulkinsert.compression.codec","SNAPPY")
         // full list in HoodieWriteConfig & its package
         .option("hoodie.upsert.shuffle.parallelism", "2")
         // Hoodie Table Type
         .option(DataSourceWriteOptions.TABLE_TYPE_OPT_KEY(), tableType)
         // insert
-        .option(DataSourceWriteOptions.OPERATION_OPT_KEY(), DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL())
+        .option(DataSourceWriteOptions.OPERATION_OPT_KEY(), DataSourceWriteOptions.BULK_INSERT_ROWS_OPERATION_OPT_VAL())
         // This is the record key
         .option(DataSourceWriteOptions.RECORDKEY_FIELD_OPT_KEY(), "_row_key")
         // this is the partition to place it into
@@ -159,7 +161,7 @@ public class HoodieJavaApp {
     /**
      * Commit that updates records
      */
-    List<HoodieRecord> recordsToBeUpdated = dataGen.generateUpdates("002"/* ignore */, 100);
+    /*List<HoodieRecord> recordsToBeUpdated = dataGen.generateUpdates("002", 100);
     recordsSoFar.addAll(recordsToBeUpdated);
     List<String> records2 = DataSourceTestUtils.convertToStringList(recordsToBeUpdated);
     Dataset<Row> inputDF2 = spark.read().json(jssc.parallelize(records2, 2));
@@ -182,7 +184,7 @@ public class HoodieJavaApp {
     /**
      * Commit that Deletes some records
      */
-    List<String> deletes = DataSourceTestUtils.convertKeysToStringList(
+    /*List<String> deletes = DataSourceTestUtils.convertKeysToStringList(
         HoodieClientTestUtils
             .getKeysToDelete(HoodieClientTestUtils.getHoodieKeys(recordsSoFar), 20));
     Dataset<Row> inputDF3 = spark.read().json(jssc.parallelize(deletes, 2));
@@ -215,11 +217,11 @@ public class HoodieJavaApp {
     // all trips whose fare amount was greater than 2.
     spark.sql("select fare.amount, begin_lon, begin_lat, timestamp from hoodie_ro where fare.amount > 2.0").show();
 
-    if (tableType.equals(HoodieTableType.COPY_ON_WRITE.name())) {
+    /*if (tableType.equals(HoodieTableType.COPY_ON_WRITE.name())) {
       /**
        * Consume incrementally, only changes in commit 2 above. Currently only supported for COPY_ON_WRITE TABLE
        */
-      Dataset<Row> incQueryDF = spark.read().format("org.apache.hudi")
+      /*Dataset<Row> incQueryDF = spark.read().format("org.apache.hudi")
           .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY(), DataSourceReadOptions.QUERY_TYPE_INCREMENTAL_OPT_VAL())
           // Only changes in write 2 above
           .option(DataSourceReadOptions.BEGIN_INSTANTTIME_OPT_KEY(), commitInstantTime1)
@@ -228,7 +230,7 @@ public class HoodieJavaApp {
 
       LOG.info("You will only see records from : " + commitInstantTime2);
       incQueryDF.groupBy(incQueryDF.col("_hoodie_commit_time")).count().show();
-    }
+    }*/
   }
 
   /**

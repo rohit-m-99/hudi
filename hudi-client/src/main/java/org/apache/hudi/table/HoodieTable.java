@@ -63,6 +63,8 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -159,6 +161,12 @@ public abstract class HoodieTable<T extends HoodieRecordPayload> implements Seri
    */
   public abstract HoodieWriteMetadata bulkInsert(JavaSparkContext jsc, String instantTime,
       JavaRDD<HoodieRecord<T>> records, Option<UserDefinedBulkInsertPartitioner> bulkInsertPartitioner);
+
+  public abstract HoodieWriteMetadata bulkInsertV2(JavaSparkContext jsc, String instantTime,
+                                                 Dataset<HoodieRecord<T>> records, Option<UserDefinedBulkInsertPartitioner> bulkInsertPartitioner);
+
+  public abstract HoodieWriteMetadata bulkInsertRows(JavaSparkContext jsc, String instantTime,
+                                                     Dataset<Row> records, Option<UserDefinedBulkInsertPartitioner> bulkInsertPartitioner);
 
   /**
    * Deletes a list of {@link HoodieKey}s from the Hoodie table, at the supplied instantTime {@link HoodieKey}s will be
