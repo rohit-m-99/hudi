@@ -89,6 +89,10 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
 
   private static final String IGNORE_METADATA_FILEDS_BULK_INSERT_FIELD_PROP = "ignore.metadata.fields.bulk.insert";
 
+  private static final String IGNORE_CAN_WRITE_CHECK_BULK_INSERT_FIELD_PROP = "ignore.can.write.check.bulk.insert";
+
+  private static final String USE_JAVA_RDD_INTERIM_WRITE_STATUS = "use.java.rdd.interim.write.status";
+
   private static final String EMBEDDED_TIMELINE_SERVER_ENABLED = "hoodie.embed.timeline.server";
   private static final String DEFAULT_EMBEDDED_TIMELINE_SERVER_ENABLED = "false";
 
@@ -240,6 +244,14 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
 
   public boolean ignoreMetadataFieldsBulkInsert() {
     return Boolean.parseBoolean(props.getProperty(IGNORE_METADATA_FILEDS_BULK_INSERT_FIELD_PROP, "false"));
+  }
+
+  public boolean ignoreCanWriteBulkInsert() {
+    return Boolean.parseBoolean(props.getProperty(IGNORE_CAN_WRITE_CHECK_BULK_INSERT_FIELD_PROP, "false"));
+  }
+
+  public boolean useJavaRddForInterimWriteStatus() {
+    return Boolean.parseBoolean(props.getProperty(USE_JAVA_RDD_INTERIM_WRITE_STATUS, "true"));
   }
 
   /**
@@ -727,6 +739,16 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
 
     public Builder withIgnoreMetadataFields(boolean ignoreMetadataFields) {
       props.setProperty(IGNORE_METADATA_FILEDS_BULK_INSERT_FIELD_PROP, String.valueOf(ignoreMetadataFields));
+      return this;
+    }
+
+    public Builder withIgnoreCanWriteCheckBulkInsert(boolean canWriteCheckBulkInsert) {
+      props.setProperty(IGNORE_CAN_WRITE_CHECK_BULK_INSERT_FIELD_PROP, String.valueOf(canWriteCheckBulkInsert));
+      return this;
+    }
+
+    public Builder withUseJavaRddForInterimWriteStatus(boolean useJavaRdd) {
+      props.setProperty(USE_JAVA_RDD_INTERIM_WRITE_STATUS, String.valueOf(useJavaRdd));
       return this;
     }
 

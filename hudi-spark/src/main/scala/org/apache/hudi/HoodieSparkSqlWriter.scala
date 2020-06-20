@@ -101,48 +101,99 @@ private[hudi] object HoodieSparkSqlWriter {
         parallelism, "SNAPPY")
       writtenRows.collect()
       (true, org.apache.hudi.common.util.Option.of("Completed"))
-    } else {
+    }
+    else if (operation.equalsIgnoreCase("bulk_insert_rows")) {
+      // register classes & schemas
+      val structName = s"${tblName.get}_record"
+      val nameSpace = s"hoodie.${tblName.get}"
+      sparkContext.getConf.registerKryoClasses(
+        Array(classOf[org.apache.avro.generic.GenericData],
+          classOf[org.apache.avro.Schema]))
+      val schema = AvroConversionUtils.convertStructTypeToAvroSchema(df.schema, structName, nameSpace)
+      sparkContext.getConf.registerAvroSchemas(schema)
+      log.info(s"Registered avro schema : ${schema.toString(true)}")
+
+      // Handle various save modes
+      if (mode == SaveMode.ErrorIfExists && exists) {
+        throw new HoodieException(s"hoodie table at $basePath already exists.")
+      }
+      if (mode == SaveMode.Ignore && exists) {
+        log.warn(s"hoodie table at $basePath already exists. Ignoring & not performing actual writes.")
+        (true, common.util.Option.empty())
+      }
+      if (mode == SaveMode.Overwrite && exists) {
+        log.warn(s"hoodie table at $basePath already exists. Deleting existing data & overwriting with new data.")
+        fs.delete(basePath, true)
+        exists = false
+      }
+
+      // Create the table if not present
+      if (!exists) {
+        HoodieTableMetaClient.initTableType(sparkContext.hadoopConfiguration, path.get, tableType,
+          tblName.get, "archived", parameters(PAYLOAD_CLASS_OPT_KEY))
+      }
+
+      // Create a HoodieWriteClient & issue the write.
+      val client = DataSourceUtils.createHoodieClient(jsc, schema.toString, path.get, tblName.get,
+        mapAsJavaMap(parameters)
+      )
+
+      client.startCommitWithTime(instantTime)
+      val writeStatuses = DataSourceUtils.doWriteOperationRows(client, df, instantTime, operation)
+      /*val (interimStatuses, writeClient: HoodieWriteClient[HoodieRecordPayload[Nothing]]) = (writeStatuses, client)
+      val writeSuccessful = checkInterimWriteStatus(interimStatuses, parameters, writeClient, instantTime, basePath, operation, jsc)*/
+      var writeSuccessful = false
+      val errorCount = writeStatuses.rdd.filter(ws => ws.hasErrors).count()
+      if (errorCount == 0) {
+        log.info("No errors. Proceeding to commit the write.")
+        val metaMap = parameters.filter(kv =>
+          kv._1.startsWith(parameters(COMMIT_METADATA_KEYPREFIX_OPT_KEY)))
+        val commitSuccess = if (metaMap.isEmpty) {
+          client.commitInterim(instantTime, writeStatuses)
+        } else {
+          client.commitInterim(instantTime, writeStatuses,
+            common.util.Option.of(new util.HashMap[String, String](mapAsJavaMap(metaMap))))
+        }
+
+        if (commitSuccess) {
+          log.info("Commit " + instantTime + " successful!")
+        }
+        else {
+          log.info("Commit " + instantTime + " failed!")
+        }
+
+        val hiveSyncEnabled = parameters.get(HIVE_SYNC_ENABLED_OPT_KEY).exists(r => r.toBoolean)
+        val syncHiveSucess = if (hiveSyncEnabled) {
+          log.info("Syncing to Hive Metastore (URL: " + parameters(HIVE_URL_OPT_KEY) + ")")
+          val fs = FSUtils.getFs(basePath.toString, jsc.hadoopConfiguration)
+          syncHive(basePath, fs, parameters)
+        } else {
+          true
+        }
+        client.close()
+        writeSuccessful = commitSuccess && syncHiveSucess
+      } else {
+        log.error(s"$operation failed with $errorCount errors :")
+        if (log.isTraceEnabled) {
+          log.trace("Printing out the top 100 errors")
+          writeStatuses.rdd.filter(ws => ws.hasErrors)
+            .take(100)
+            .foreach(ws => {
+              log.trace("Global error :", ws.globalError)
+              if (ws.failedRows.size() > 0) {
+                ws.failedRows.foreach(kt =>
+                  log.trace(s"Error for key: ${kt._2}", kt._3))
+              }
+            })
+        }
+        writeSuccessful = false
+      }
+
+      (writeSuccessful, common.util.Option.ofNullable(instantTime))
+    }
+    else {
       val (writeStatuses, writeClient: HoodieWriteClient[HoodieRecordPayload[Nothing]]) =
-        if (operation.equalsIgnoreCase("bulk_insert_rows")) {
-          // register classes & schemas
-          val structName = s"${tblName.get}_record"
-          val nameSpace = s"hoodie.${tblName.get}"
-          sparkContext.getConf.registerKryoClasses(
-            Array(classOf[org.apache.avro.generic.GenericData],
-              classOf[org.apache.avro.Schema]))
-          val schema = AvroConversionUtils.convertStructTypeToAvroSchema(df.schema, structName, nameSpace)
-          sparkContext.getConf.registerAvroSchemas(schema)
-          log.info(s"Registered avro schema : ${schema.toString(true)}")
-
-          // Handle various save modes
-          if (mode == SaveMode.ErrorIfExists && exists) {
-            throw new HoodieException(s"hoodie table at $basePath already exists.")
-          }
-          if (mode == SaveMode.Ignore && exists) {
-            log.warn(s"hoodie table at $basePath already exists. Ignoring & not performing actual writes.")
-            (true, common.util.Option.empty())
-          }
-          if (mode == SaveMode.Overwrite && exists) {
-            log.warn(s"hoodie table at $basePath already exists. Deleting existing data & overwriting with new data.")
-            fs.delete(basePath, true)
-            exists = false
-          }
-
-          // Create the table if not present
-          if (!exists) {
-            HoodieTableMetaClient.initTableType(sparkContext.hadoopConfiguration, path.get, tableType,
-              tblName.get, "archived", parameters(PAYLOAD_CLASS_OPT_KEY))
-          }
-
-          // Create a HoodieWriteClient & issue the write.
-          val client = DataSourceUtils.createHoodieClient(jsc, schema.toString, path.get, tblName.get,
-            mapAsJavaMap(parameters)
-          )
-
-          client.startCommitWithTime(instantTime)
-          val writeStatuses = DataSourceUtils.doWriteOperationRows(client, df, instantTime, operation)
-          (writeStatuses, client)
-        } else if (!operation.equalsIgnoreCase(DELETE_OPERATION_OPT_VAL)) {
+        if (!operation.equalsIgnoreCase(DELETE_OPERATION_OPT_VAL)) {
           // register classes & schemas
           val structName = s"${tblName.get}_record"
           val nameSpace = s"hoodie.${tblName.get}"
@@ -155,7 +206,6 @@ private[hudi] object HoodieSparkSqlWriter {
 
           // Convert to RDD[HoodieRecord]
           val keyGenerator = DataSourceUtils.createKeyGenerator(toProperties(parameters))
-
           val genericRecords: RDD[GenericRecord] = AvroConversionUtils.createRdd(df, structName, nameSpace)
           val hoodieAllIncomingRecords = genericRecords.map(gr => {
             val orderingVal = DataSourceUtils.getNestedFieldValAsString(

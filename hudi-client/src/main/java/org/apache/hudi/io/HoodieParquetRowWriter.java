@@ -18,18 +18,19 @@
 
 package org.apache.hudi.io;
 
+import org.apache.hudi.client.InterimWriteStatus;
 import org.apache.hudi.client.SparkTaskContextSupplier;
 import org.apache.hudi.common.fs.FSUtils;
 import org.apache.hudi.common.fs.HoodieWrapperFileSystem;
 import org.apache.hudi.common.model.HoodiePartitionMetadata;
 import org.apache.hudi.common.model.HoodieRecord;
+import org.apache.hudi.common.model.HoodieWriteStat;
 import org.apache.hudi.common.util.HoodieTimer;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieException;
 import org.apache.hudi.exception.HoodieIOException;
 import org.apache.hudi.io.storage.HoodieRowParquetWriteSupport;
 import org.apache.hudi.table.HoodieTable;
-import org.apache.hudi.table.action.commit.InterimWriteStatus;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -106,10 +107,16 @@ public class HoodieParquetRowWriter implements Serializable {
     this.partitionPathProp = config.getPartitionPathFieldProp();
     this.writeSupport = writeSupport;
     this.timer = new HoodieTimer().startTimer();
-    this.interimWriteStatus = new InterimWriteStatus(config.getRecordKeyFieldProp());
+    this.interimWriteStatus = new InterimWriteStatus(recordKeyProp);
+    //writeStatus = (WriteStatus) ReflectionUtils.loadClass(config.getWriteStatusClassName(),
+    //  !hoodieTable.getIndex().isImplicitWithStorage(), config.getWriteStatusFailureFraction());
     this.interimWriteStatus.fileId = fileId;
+    // this.interimWriteStatus.setFileId(fileId);
+    //this.writeStatus.setFileId(fileId);
     try {
       interimWriteStatus.partitionPath = partitionPath;
+      //interimWriteStatus.setPartitionPath(partitionPath);
+      //this.writeStatus.setPartitionPath(partitionPath);
       path = makeNewPath(partitionPath, writeToken, fileId, fs);
       Configuration localConf = registerFileSystem(path, hoodieTable.getHadoopConf());
       // convert to hoodiePath and instantiate WrapperFileSystem to assist in finding file size
@@ -129,6 +136,8 @@ public class HoodieParquetRowWriter implements Serializable {
     } catch (Throwable e) {
       LOG.error("Throwable thrown during instantiation of HoodieCreateHandleRows ", e);
       interimWriteStatus.globalError = e;
+      //interimWriteStatus.setGlobalError(e);
+      //this.writeStatus.setGlobalError(e);
       throw e;
     }
   }
@@ -136,6 +145,8 @@ public class HoodieParquetRowWriter implements Serializable {
   public boolean canWrite(Row row) {
     return interimWriteStatus.globalError == null && wrapperFileSystem.getBytesWritten(hoodiePath) < maxFileSize
         && row.getAs(config.getPartitionPathFieldProp()).equals(interimWriteStatus.partitionPath);
+    /*return writeStatus.getGlobalError() == null && wrapperFileSystem.getBytesWritten(hoodiePath) < maxFileSize
+        && row.getAs(config.getPartitionPathFieldProp()).equals(writeStatus.getPartitionPath());*/
   }
 
   public void writeRow(Row row) {
@@ -159,10 +170,12 @@ public class HoodieParquetRowWriter implements Serializable {
       writer.write(internalRow);
       writeSupport.add(row.getAs(recordKeyProp));
       interimWriteStatus.markSuccess(row);
+      //writeStatus.markSuccess(row);
       recordsWritten++;
       insertRecordsWritten++;
     } catch (Throwable e) {
-      interimWriteStatus.markFailure(row, row.getAs(config.getRecordKeyFieldProp()), e);
+      interimWriteStatus.markFailure(row, row.getAs(recordKeyProp), e);
+      //writeStatus.markFailure(row, row.getAs(recordKeyProp), e);
     }
   }
 
@@ -172,6 +185,82 @@ public class HoodieParquetRowWriter implements Serializable {
     interimWriteStatus.recordsWritten = recordsWritten;
     interimWriteStatus.insertRecordsWritten = insertRecordsWritten;
     interimWriteStatus.endTime = timer.endTimer();
+
+    /*interimWriteStatus.setPath(path);
+    interimWriteStatus.setRecordsWritten(recordsWritten);
+    interimWriteStatus.setInsertRecordsWritten(insertRecordsWritten);
+    interimWriteStatus.setEndTime(timer.endTimer());*/
+
+    HoodieWriteStat stat = new HoodieWriteStat();
+    stat.setPartitionPath(interimWriteStatus.partitionPath);
+    stat.setNumWrites(interimWriteStatus.recordsWritten);
+    stat.setNumDeletes(0);
+    stat.setNumInserts(interimWriteStatus.insertRecordsWritten);
+    stat.setPrevCommit(HoodieWriteStat.NULL_COMMIT);
+    stat.setFileId(interimWriteStatus.fileId);
+    if (path != null) {
+      stat.setPath(new Path(config.getBasePath()), path);
+      long fileSizeInBytes = FSUtils.getFileSize(fs, path);
+      stat.setTotalWriteBytes(fileSizeInBytes);
+      stat.setFileSizeInBytes(fileSizeInBytes);
+    } else {
+      stat.setTotalWriteBytes(0);
+      stat.setFileSizeInBytes(0);
+    }
+    stat.setTotalWriteErrors(interimWriteStatus.failedRows.size());
+    HoodieWriteStat.RuntimeStats runtimeStats = new HoodieWriteStat.RuntimeStats();
+    runtimeStats.setTotalCreateTime(interimWriteStatus.endTime);
+    stat.setRuntimeStats(runtimeStats);
+    interimWriteStatus.setStat(stat);
+
+    /*HoodieWriteStat stat = new HoodieWriteStat();
+    stat.setPartitionPath(interimWriteStatus.getPartitionPath());
+    stat.setNumWrites(interimWriteStatus.getRecordsWritten());
+    stat.setNumDeletes(0);
+    stat.setNumInserts(interimWriteStatus.getInsertRecordsWritten());
+    stat.setPrevCommit(HoodieWriteStat.NULL_COMMIT);
+    stat.setFileId(interimWriteStatus.getFileId());
+    if (path != null) {
+      stat.setPath(new Path(config.getBasePath()), path);
+      long fileSizeInBytes = FSUtils.getFileSize(fs, path);
+      stat.setTotalWriteBytes(fileSizeInBytes);
+      stat.setFileSizeInBytes(fileSizeInBytes);
+    } else {
+      stat.setTotalWriteBytes(0);
+      stat.setFileSizeInBytes(0);
+    }
+    stat.setTotalWriteErrors(interimWriteStatus.getFailedRows().size());
+    HoodieWriteStat.RuntimeStats runtimeStats = new HoodieWriteStat.RuntimeStats();
+    runtimeStats.setTotalCreateTime(interimWriteStatus.getEndTime());
+    stat.setRuntimeStats(runtimeStats);
+    interimWriteStatus.setStat(stat);*/
+
+    // writeStatus.setPath(path);
+    //interimWriteStatus.setInsertRecordsWritten(insertRecordsWritten);
+    //interimWriteStatus.setEndTime(timer.endTimer());
+
+    /*HoodieWriteStat stat = new HoodieWriteStat();
+    stat.setPartitionPath(writeStatus.getPartitionPath());
+    stat.setNumWrites(recordsWritten);
+    stat.setNumDeletes(0);
+    stat.setNumInserts(insertRecordsWritten);
+    stat.setPrevCommit(HoodieWriteStat.NULL_COMMIT);
+    stat.setFileId(writeStatus.getFileId());
+    if (path != null) {
+      stat.setPath(new Path(config.getBasePath()), path);
+      long fileSizeInBytes = FSUtils.getFileSize(fs, path);
+      stat.setTotalWriteBytes(fileSizeInBytes);
+      stat.setFileSizeInBytes(fileSizeInBytes);
+    } else {
+      stat.setTotalWriteBytes(0);
+      stat.setFileSizeInBytes(0);
+    }
+    stat.setTotalWriteErrors(writeStatus.getTotalErrorRecords());
+    HoodieWriteStat.RuntimeStats runtimeStats = new HoodieWriteStat.RuntimeStats();
+    runtimeStats.setTotalCreateTime(timer.endTimer());
+    stat.setRuntimeStats(runtimeStats);
+    writeStatus.setStat(stat);
+    */
     return interimWriteStatus;
   }
 
@@ -187,6 +276,8 @@ public class HoodieParquetRowWriter implements Serializable {
     if (interimWriteStatus.globalError == null) {
       LOG.error("Setting Global error for " + partitionPath + ", fileId " + fileId + " :: " + e.getCause());
       interimWriteStatus.globalError = e;
+      //interimWriteStatus.setGlobalError(e);
+      // writeStatus.setGlobalError(e);
     } else {
       LOG.error("Ignoring global error since its already set for " + partitionPath + ", fieId " + fileId
           + ". Existing " + interimWriteStatus.globalError.getCause() + ".. New " + e.getCause());

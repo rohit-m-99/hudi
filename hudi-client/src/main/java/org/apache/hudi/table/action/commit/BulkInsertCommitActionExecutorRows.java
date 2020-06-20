@@ -49,7 +49,7 @@ public class BulkInsertCommitActionExecutorRows<T extends HoodieRecordPayload<T>
   @Override
   public HoodieWriteMetadata execute() {
     try {
-      return BulkInsertHelperRows.bulkInsertRows(rowDataset, instantTime, (HoodieTable<T>) table, config,
+      return BulkInsertHelperRows.bulkInsertRows(jsc, rowDataset, instantTime, (HoodieTable<T>) table, config,
           this, true, bulkInsertPartitioner);
     } catch (Throwable e) {
       if (e instanceof HoodieInsertException) {

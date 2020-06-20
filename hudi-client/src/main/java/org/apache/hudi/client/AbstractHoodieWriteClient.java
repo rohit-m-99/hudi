@@ -18,7 +18,6 @@
 
 package org.apache.hudi.client;
 
-import com.codahale.metrics.Timer;
 import org.apache.hudi.client.embedded.EmbeddedTimelineService;
 import org.apache.hudi.common.model.HoodieCommitMetadata;
 import org.apache.hudi.common.model.HoodieRecordPayload;
@@ -37,20 +36,24 @@ import org.apache.hudi.exception.HoodieIOException;
 import org.apache.hudi.index.HoodieIndex;
 import org.apache.hudi.metrics.HoodieMetrics;
 import org.apache.hudi.table.HoodieTable;
+
+import com.codahale.metrics.Timer;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Abstract Write Client providing functionality for performing commit, index updates and rollback
- *  Reused for regular write operations like upsert/insert/bulk-insert.. as well as bootstrap
+ * Abstract Write Client providing functionality for performing commit, index updates and rollback Reused for regular write operations like upsert/insert/bulk-insert.. as well as bootstrap
+ *
  * @param <T> Sub type of HoodieRecordPayload
  */
 public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload> extends AbstractHoodieClient {
@@ -88,10 +91,23 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload> e
   /**
    * Commit changes performed at the given instantTime marker.
    */
+  public boolean commitInterim(String instantTime, Dataset<InterimWriteStatus> writeStatuses) {
+    return commitInterim(instantTime, writeStatuses, Option.empty());
+  }
+
+  /**
+   * Commit changes performed at the given instantTime marker.
+   */
   public boolean commit(String instantTime, JavaRDD<WriteStatus> writeStatuses,
       Option<Map<String, String>> extraMetadata) {
     HoodieTableMetaClient metaClient = createMetaClient(false);
     return commit(instantTime, writeStatuses, extraMetadata, metaClient.getCommitActionType());
+  }
+
+  public boolean commitInterim(String instantTime, Dataset<InterimWriteStatus> writeStatuses,
+      Option<Map<String, String>> extraMetadata) {
+    HoodieTableMetaClient metaClient = createMetaClient(false);
+    return commitInterim(instantTime, writeStatuses, extraMetadata, metaClient.getCommitActionType());
   }
 
   private boolean commit(String instantTime, JavaRDD<WriteStatus> writeStatuses,
@@ -104,6 +120,58 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload> e
     HoodieActiveTimeline activeTimeline = table.getActiveTimeline();
     HoodieCommitMetadata metadata = new HoodieCommitMetadata();
     List<HoodieWriteStat> stats = writeStatuses.map(WriteStatus::getStat).collect();
+
+    updateMetadataAndRollingStats(actionType, metadata, stats);
+
+    // Finalize write
+    finalizeWrite(table, instantTime, stats);
+
+    // add in extra metadata
+    if (extraMetadata.isPresent()) {
+      extraMetadata.get().forEach(metadata::addMetadata);
+    }
+    metadata.addMetadata(HoodieCommitMetadata.SCHEMA_KEY, config.getSchema());
+    metadata.setOperationType(operationType);
+
+    try {
+      activeTimeline.saveAsComplete(new HoodieInstant(true, actionType, instantTime),
+          Option.of(metadata.toJsonString().getBytes(StandardCharsets.UTF_8)));
+      postCommit(metadata, instantTime, extraMetadata);
+      emitCommitMetrics(instantTime, metadata, actionType);
+      LOG.info("Committed " + instantTime);
+    } catch (IOException e) {
+      throw new HoodieCommitException("Failed to complete commit " + config.getBasePath() + " at time " + instantTime,
+          e);
+    }
+    return true;
+  }
+
+  private boolean commitInterim(String instantTime, Dataset<InterimWriteStatus> writeStatuses,
+      Option<Map<String, String>> extraMetadata, String actionType) {
+
+    LOG.info("Committing " + instantTime);
+    // Create a Hoodie table which encapsulated the commits and files visible
+    HoodieTable<T> table = HoodieTable.create(config, jsc);
+
+    HoodieActiveTimeline activeTimeline = table.getActiveTimeline();
+    HoodieCommitMetadata metadata = new HoodieCommitMetadata();
+    // List<HoodieWriteStat> stats = writeStatuses.map(WriteStatus::getStat).collect();
+    List<HoodieWriteStat> stats = new ArrayList<>();
+    if (config.useJavaRddForInterimWriteStatus()) {
+      System.out.println("Using to JavaRDD");
+      stats = writeStatuses.toJavaRDD().map(entry -> entry.getStat()).collect();
+    } else {
+      System.out.println("Using collect");
+      List<InterimWriteStatus> interimWriteStatuses = writeStatuses.collectAsList();
+      for (InterimWriteStatus interimWriteStatus : interimWriteStatuses) {
+        stats.add(interimWriteStatus.getStat());
+      }
+      /*
+        stats = result.getInterimWriteStatusDataset().map(
+          (MapFunction<InterimWriteStatus, HoodieWriteStat>) value
+              -> value.stat, Encoders.bean(HoodieWriteStat.class)).collectAsList();
+      */
+    }
 
     updateMetadataAndRollingStats(actionType, metadata, stats);
 
@@ -147,15 +215,17 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload> e
 
   /**
    * Post Commit Hook. Derived classes use this method to perform post-commit processing
-   * @param metadata      Commit Metadata corresponding to committed instant
-   * @param instantTime   Instant Time
+   *
+   * @param metadata Commit Metadata corresponding to committed instant
+   * @param instantTime Instant Time
    * @param extraMetadata Additional Metadata passed by user
    */
   protected abstract void postCommit(HoodieCommitMetadata metadata, String instantTime, Option<Map<String, String>> extraMetadata);
 
   /**
    * Finalize Write operation.
-   * @param table  HoodieTable
+   *
+   * @param table HoodieTable
    * @param instantTime Instant Time
    * @param stats Hoodie Write Stat
    */

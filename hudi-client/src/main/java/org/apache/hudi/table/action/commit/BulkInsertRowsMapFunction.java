@@ -18,6 +18,7 @@
 
 package org.apache.hudi.table.action.commit;
 
+import org.apache.hudi.client.InterimWriteStatus;
 import org.apache.hudi.client.SparkTaskContextSupplier;
 import org.apache.hudi.common.bloom.BloomFilter;
 import org.apache.hudi.common.bloom.BloomFilterFactory;
@@ -40,6 +41,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 public class BulkInsertRowsMapFunction<T extends HoodieRecordPayload> implements MapPartitionsFunction<Row, InterimWriteStatus> {
 
@@ -52,6 +54,8 @@ public class BulkInsertRowsMapFunction<T extends HoodieRecordPayload> implements
   protected SparkTaskContextSupplier sparkTaskContextSupplier;
   private int filesWritten = 0;
   private boolean ignoreMetadataFields;
+  private boolean ignoreCanWrite;
+  private Random random = new Random();
 
   public BulkInsertRowsMapFunction(String instantTime, HoodieWriteConfig config, HoodieTable<T> hoodieTable,
       ExpressionEncoder<Row> encoder) {
@@ -61,6 +65,7 @@ public class BulkInsertRowsMapFunction<T extends HoodieRecordPayload> implements
     this.encoder = encoder;
     this.sparkTaskContextSupplier = hoodieTable.getSparkTaskContextSupplier();
     this.ignoreMetadataFields = config.ignoreMetadataFieldsBulkInsert();
+    this.ignoreCanWrite = config.ignoreCanWriteBulkInsert();
   }
 
   @Override
@@ -70,16 +75,31 @@ public class BulkInsertRowsMapFunction<T extends HoodieRecordPayload> implements
     String writeToken = makeWriteToken();
     String filePrefix = FSUtils.createNewFileIdPfx();
     HoodieParquetRowWriter parquetRowWriter = null;
+    int localRandom = random.nextInt(100000);
+    /*List<Row> rows = new ArrayList<>();
+    while (input.hasNext()) {
+      rows.add(input.next());
+    }
 
+    System.out.println("Total rows in " + localRandom + " = " + rows.size());
+    LOG.info("Total rows in " + localRandom + " = " + rows.size());
+    /*for (Row row : rows) {
+      System.out.println(localRandom + " " + row.getAs(config.getPartitionPathFieldProp()));
+      LOG.info(localRandom + " " + row.getAs(config.getPartitionPathFieldProp()));
+    }*/
+
+    // Iterator<Row> input1 = rows.iterator();
     try {
       while (input.hasNext()) {
         Row row = input.next();
         if (parquetRowWriter == null) { // first time
           parquetRowWriter = instantiateAndGetWriter(row, filePrefix, writeToken);
         }
-        if (!parquetRowWriter.canWrite(row)) { // if reached max size, close and reopen another writer
-          writeStatuses.add(parquetRowWriter.close());
-          parquetRowWriter = instantiateAndGetWriter(row, filePrefix, writeToken);
+        if (!ignoreCanWrite) {
+          if (!parquetRowWriter.canWrite(row)) { // if reached max size, close and reopen another writer
+            writeStatuses.add(parquetRowWriter.close());
+            parquetRowWriter = instantiateAndGetWriter(row, filePrefix, writeToken);
+          }
         }
         parquetRowWriter.writeRow(row);
       }
@@ -91,13 +111,14 @@ public class BulkInsertRowsMapFunction<T extends HoodieRecordPayload> implements
         try {
           writeStatuses.add(parquetRowWriter.close());
         } catch (IOException ex) {
+          LOG.error("Subsequent ioexception thrown ", e);
           ex.printStackTrace();
         }
       }
     }
     return writeStatuses.iterator();
   }
-  
+
   private HoodieParquetRowWriter instantiateAndGetWriter(Row row, String filePrefix, String writeToken) throws IOException {
     BloomFilter filter = BloomFilterFactory
         .createBloomFilter(config.getBloomFilterNumEntries(), config.getBloomFilterFPP(),

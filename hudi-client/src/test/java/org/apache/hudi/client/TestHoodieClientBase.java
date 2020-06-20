@@ -147,7 +147,7 @@ public class TestHoodieClientBase extends HoodieClientTestHarness {
    * @return Config Builder
    */
   HoodieWriteConfig.Builder getConfigBuilder(String schemaStr, IndexType indexType) {
-    return HoodieWriteConfig.newBuilder().withPath(basePath).withSchema(schemaStr)
+    HoodieWriteConfig.Builder configBuilder = HoodieWriteConfig.newBuilder().withPath(basePath).withSchema(schemaStr)
         .withParallelism(2, 2).withBulkInsertParallelism(2).withFinalizeWriteParallelism(2)
         .withTimelineLayoutVersion(TimelineLayoutVersion.CURR_VERSION)
         .withWriteStatusClass(MetadataMergeWriteStatus.class)
@@ -158,6 +158,7 @@ public class TestHoodieClientBase extends HoodieClientTestHarness {
         .withIndexConfig(HoodieIndexConfig.newBuilder().withIndexType(indexType).build())
         .withEmbeddedTimelineServerEnabled(true).withFileSystemViewConfig(FileSystemViewStorageConfig.newBuilder()
             .withStorageType(FileSystemViewStorageType.EMBEDDED_KV_STORE).build());
+    return configBuilder;
   }
 
   protected HoodieTable getHoodieTable(HoodieTableMetaClient metaClient, HoodieWriteConfig config) {
@@ -175,6 +176,13 @@ public class TestHoodieClientBase extends HoodieClientTestHarness {
     // Verify there are no errors
     for (WriteStatus status : statuses) {
       assertFalse(status.hasErrors(), "Errors found in write of " + status.getFileId());
+    }
+  }
+
+  public static void assertNoWriteErrorsInterimWriteStatus(List<InterimWriteStatus> statuses) {
+    // Verify there are no errors
+    for (InterimWriteStatus status : statuses) {
+      assertEquals(status.failedRows.size(), 0, "Errors found in write of " + status.fileId);
     }
   }
 
@@ -403,9 +411,9 @@ public class TestHoodieClientBase extends HoodieClientTestHarness {
    * @return RDD of write-status
    * @throws Exception in case of error
    */
-  JavaRDD<WriteStatus> insertFirstBatchRows(HoodieWriteConfig writeConfig, HoodieWriteClient client, String newCommitTime,
+  Dataset<InterimWriteStatus> insertFirstBatchRows(HoodieWriteConfig writeConfig, HoodieWriteClient client, String newCommitTime,
       String initCommitTime, int numRecordsInThisCommit,
-      Function3<JavaRDD<WriteStatus>, HoodieWriteClient, Dataset<Row>, String> writeFn, boolean isPreppedAPI,
+      Function3<Dataset<InterimWriteStatus>, HoodieWriteClient, Dataset<Row>, String> writeFn, boolean isPreppedAPI,
       boolean assertForCommit, int expRecordsInThisCommit) throws Exception {
     final Function2<List<GenericRecord>, String, Integer> recordGenFunction =
         generateWrapRowsFn(isPreppedAPI, writeConfig, dataGen::generateInsertsGenRec);
@@ -592,10 +600,10 @@ public class TestHoodieClientBase extends HoodieClientTestHarness {
    * @param expTotalCommits Expected number of commits (including this commit)
    * @throws Exception in case of error
    */
-  JavaRDD<WriteStatus> writeBatchRows(HoodieWriteClient client, String newCommitTime, String prevCommitTime,
+  Dataset<InterimWriteStatus> writeBatchRows(HoodieWriteClient client, String newCommitTime, String prevCommitTime,
       Option<List<String>> commitTimesBetweenPrevAndNew, String initCommitTime, int numRecordsInThisCommit,
       Function2<List<GenericRecord>, String, Integer> recordGenFunction,
-      Function3<JavaRDD<WriteStatus>, HoodieWriteClient, Dataset<Row>, String> writeFn,
+      Function3<Dataset<InterimWriteStatus>, HoodieWriteClient, Dataset<Row>, String> writeFn,
       boolean assertForCommit, int expRecordsInThisCommit, int expTotalRecords, int expTotalCommits) throws Exception {
 
     // Write 1 (only inserts)
@@ -604,10 +612,10 @@ public class TestHoodieClientBase extends HoodieClientTestHarness {
     List<GenericRecord> records = recordGenFunction.apply(newCommitTime, numRecordsInThisCommit);
     JavaRDD<GenericRecord> writeRecords = jsc.parallelize(records, 1);
     Dataset<Row> rowDataset = AvroConversionClientUtils.createDataFrame(writeRecords.rdd(), AVRO_SCHEMA_1.toString(), sqlContext.sparkSession());
-
-    JavaRDD<WriteStatus> result = writeFn.apply(client, rowDataset, newCommitTime);
-    List<WriteStatus> statuses = result.collect();
-    assertNoWriteErrors(statuses);
+    List<Row> rows = rowDataset.collectAsList();
+    Dataset<InterimWriteStatus> result = writeFn.apply(client, rowDataset, newCommitTime);
+    List<InterimWriteStatus> statuses = result.collectAsList();
+    assertNoWriteErrorsInterimWriteStatus(statuses);
 
     // check the partition metadata is written out
     assertPartitionMetadataForRows(records, fs);

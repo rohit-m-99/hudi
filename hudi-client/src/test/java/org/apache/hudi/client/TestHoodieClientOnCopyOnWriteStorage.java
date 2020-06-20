@@ -152,7 +152,7 @@ public class TestHoodieClientOnCopyOnWriteStorage extends TestHoodieClientBase {
    * @throws Exception in case of failure
    */
   private void testAutoCommit(Function3<JavaRDD<WriteStatus>, HoodieWriteClient, JavaRDD<HoodieRecord>, String> writeFn,
-                              boolean isPrepped) throws Exception {
+      boolean isPrepped) throws Exception {
     // Set autoCommit false
     HoodieWriteConfig cfg = getConfigBuilder().withAutoCommit(false).build();
     try (HoodieWriteClient client = getHoodieWriteClient(cfg);) {
@@ -177,21 +177,21 @@ public class TestHoodieClientOnCopyOnWriteStorage extends TestHoodieClientBase {
    * @param writeFn One of HoodieWriteClient Write API
    * @throws Exception in case of failure
    */
-  private void testAutoCommitRows(Function3<JavaRDD<WriteStatus>, HoodieWriteClient, Dataset<Row>, String> writeFn,
+  private void testAutoCommitRows(Function3<Dataset<InterimWriteStatus>, HoodieWriteClient, Dataset<Row>, String> writeFn,
       boolean isPrepped) throws Exception {
     // Set autoCommit false
-    HoodieWriteConfig cfg = getConfigBuilder().withAutoCommit(false).withIgnoreMetadataFields(false).build();
+    HoodieWriteConfig cfg = getConfigBuilder().withUseJavaRddForInterimWriteStatus(true).build();
     try (HoodieWriteClient client = getHoodieWriteClient(cfg);) {
 
       String prevCommitTime = "000";
       String newCommitTime = "001";
-      int numRecords = 30;
-      JavaRDD<WriteStatus> result = insertFirstBatchRows(cfg, client, newCommitTime, prevCommitTime, numRecords, writeFn,
-          isPrepped, false, numRecords);
+      int numRecords = 10;
+      Dataset<InterimWriteStatus> result = insertFirstBatchRows(cfg, client, newCommitTime, prevCommitTime, numRecords, writeFn,
+          isPrepped, true, numRecords);
 
       assertFalse(HoodieTestUtils.doesCommitExist(basePath, newCommitTime),
           "If Autocommit is false, then commit should not be made automatically");
-      assertTrue(client.commit(newCommitTime, result), "Commit should succeed");
+      assertTrue(client.commitInterim(newCommitTime, result), "Commit should succeed");
       assertTrue(HoodieTestUtils.doesCommitExist(basePath, newCommitTime),
           "After explicit commit, commit file should be created");
     }
@@ -310,12 +310,12 @@ public class TestHoodieClientOnCopyOnWriteStorage extends TestHoodieClientBase {
   /**
    * Test one of HoodieWriteClient upsert(Prepped) APIs.
    *
-   * @param config  Write Config
+   * @param config Write Config
    * @param writeFn One of Hoodie Write Function API
    * @throws Exception in case of error
    */
   private void testUpsertsInternal(HoodieWriteConfig config,
-                                   Function3<JavaRDD<WriteStatus>, HoodieWriteClient, JavaRDD<HoodieRecord>, String> writeFn, boolean isPrepped)
+      Function3<JavaRDD<WriteStatus>, HoodieWriteClient, JavaRDD<HoodieRecord>, String> writeFn, boolean isPrepped)
       throws Exception {
     // Force using older timeline layout
     HoodieWriteConfig hoodieWriteConfig = getConfigBuilder().withProps(config.getProps()).withTimelineLayoutVersion(
@@ -750,7 +750,7 @@ public class TestHoodieClientOnCopyOnWriteStorage extends TestHoodieClientBase {
   }
 
   private Pair<Set<String>, List<HoodieRecord>> testUpdates(String instantTime, HoodieWriteClient client,
-                                                            int sizeToInsertAndUpdate, int expectedTotalRecords)
+      int sizeToInsertAndUpdate, int expectedTotalRecords)
       throws IOException {
     client.startCommitWithTime(instantTime);
     List<HoodieRecord> inserts = dataGen.generateInserts(instantTime, sizeToInsertAndUpdate);
@@ -775,7 +775,7 @@ public class TestHoodieClientOnCopyOnWriteStorage extends TestHoodieClientBase {
   }
 
   private void testDeletes(HoodieWriteClient client, List<HoodieRecord> previousRecords, int sizeToDelete,
-                           String existingFile, String instantTime, int exepctedRecords, List<String> keys) {
+      String existingFile, String instantTime, int exepctedRecords, List<String> keys) {
     client.startCommitWithTime(instantTime);
 
     List<HoodieKey> hoodieKeysToDelete = HoodieClientTestUtils

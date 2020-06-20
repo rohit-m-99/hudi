@@ -18,6 +18,7 @@
 
 package org.apache.hudi.table.action.commit;
 
+import org.apache.hudi.client.InterimWriteStatus;
 import org.apache.hudi.client.SparkTaskContextSupplier;
 import org.apache.hudi.client.WriteStatus;
 import org.apache.hudi.client.utils.SparkConfigUtils;
@@ -38,19 +39,21 @@ import org.apache.hudi.table.HoodieTable;
 import org.apache.hudi.table.WorkloadProfile;
 import org.apache.hudi.table.WorkloadStat;
 import org.apache.hudi.table.action.BaseActionExecutor;
-
 import org.apache.hudi.table.action.HoodieWriteMetadata;
+
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.Partitioner;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.storage.StorageLevel;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -110,10 +113,9 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload<T>>
   }
 
   /**
-   * Save the workload profile in an intermediate file (here re-using commit files) This is useful when performing
-   * rollback for MOR tables. Only updates are recorded in the workload profile metadata since updates to log blocks
-   * are unknown across batches Inserts (which are new parquet files) are rolled back based on commit time. // TODO :
-   * Create a new WorkloadProfile metadata file instead of using HoodieCommitMetadata
+   * Save the workload profile in an intermediate file (here re-using commit files) This is useful when performing rollback for MOR tables. Only updates are recorded in the workload profile metadata
+   * since updates to log blocks are unknown across batches Inserts (which are new parquet files) are rolled back based on commit time. // TODO : Create a new WorkloadProfile metadata file instead of
+   * using HoodieCommitMetadata
    */
   void saveWorkloadProfileMetadataToInflight(WorkloadProfile profile, String instantTime)
       throws HoodieCommitException {
@@ -162,10 +164,23 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload<T>>
     writeStatusRDD = writeStatusRDD.persist(SparkConfigUtils.getWriteStatusStorageLevel(config.getProps()));
     Instant indexStartTime = Instant.now();
     // Update the index back
-    JavaRDD<WriteStatus> statuses = ((HoodieTable<T>)table).getIndex().updateLocation(writeStatusRDD, jsc,
-        (HoodieTable<T>)table);
+    JavaRDD<WriteStatus> statuses = ((HoodieTable<T>) table).getIndex().updateLocation(writeStatusRDD, jsc,
+        (HoodieTable<T>) table);
     result.setIndexUpdateDuration(Duration.between(indexStartTime, Instant.now()));
     result.setWriteStatuses(statuses);
+    commitOnAutoCommit(result);
+  }
+
+  protected void updateIndexAndCommitIfNeeded(Dataset<InterimWriteStatus> writeStatusRDD, HoodieWriteMetadata result) {
+    // cache writeStatusRDD before updating index, so that all actions before this are not triggered again for future
+    // RDD actions that are performed after updating the index.
+    writeStatusRDD = writeStatusRDD.persist(SparkConfigUtils.getWriteStatusStorageLevel(config.getProps()));
+    Instant indexStartTime = Instant.now();
+    // Update the index back
+    Dataset<InterimWriteStatus> statuses = ((HoodieTable<T>) table).getIndex().updateLocation(writeStatusRDD, jsc,
+        (HoodieTable<T>) table);
+    result.setIndexUpdateDuration(Duration.between(indexStartTime, Instant.now()));
+    result.setInterimWriteStatusDataset(statuses);
     commitOnAutoCommit(result);
   }
 
@@ -188,9 +203,37 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload<T>>
     HoodieCommitMetadata metadata = new HoodieCommitMetadata();
 
     result.setCommitted(true);
-    List<HoodieWriteStat> stats = result.getWriteStatuses().map(WriteStatus::getStat).collect();
-    result.setWriteStats(stats);
+    List<HoodieWriteStat> stats = new ArrayList<>();
+    if (!result.isDataset()) {
+      stats = result.getWriteStatuses().map(WriteStatus::getStat).collect();
+    } else {
+      System.out.println("Going to call getInterminStatsDataset() and then map to HoodieWriteStat");
 
+      if (config.useJavaRddForInterimWriteStatus()) {
+        System.out.println("Using to JavaRDD");
+        stats = result.getInterimWriteStatusDataset().toJavaRDD().map(entry -> entry.getStat()).collect();
+      } else {
+        System.out.println("Using collect");
+        List<InterimWriteStatus> interimWriteStatuses = result.getInterimWriteStatusDataset().collectAsList();
+        for (InterimWriteStatus interimWriteStatus : interimWriteStatuses) {
+          stats.add(interimWriteStatus.getStat());
+        }
+        /*
+        stats = result.getInterimWriteStatusDataset().map(
+          (MapFunction<InterimWriteStatus, HoodieWriteStat>) value
+              -> value.stat, Encoders.bean(HoodieWriteStat.class)).collectAsList();
+        */
+      }
+    }
+    System.out.println("Complete populating list of write stats");
+    long totalWrites = 0;
+    long totalInserts = 0;
+    for (HoodieWriteStat stat : stats) {
+      totalWrites += stat.getNumWrites();
+      totalInserts += stat.getNumInserts();
+    }
+    System.out.println("Total writes " + totalWrites + ", total inserts " + totalInserts);
+    result.setWriteStats(stats);
     updateMetadataAndRollingStats(metadata, stats);
 
     // Finalize write
@@ -216,6 +259,7 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload<T>>
 
   /**
    * Finalize Write operation.
+   *
    * @param instantTime Instant Time
    * @param stats Hoodie Write Stat
    */

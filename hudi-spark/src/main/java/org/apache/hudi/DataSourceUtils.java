@@ -20,6 +20,7 @@ package org.apache.hudi;
 
 import org.apache.hudi.client.HoodieReadClient;
 import org.apache.hudi.client.HoodieWriteClient;
+import org.apache.hudi.client.InterimWriteStatus;
 import org.apache.hudi.client.WriteStatus;
 import org.apache.hudi.common.config.TypedProperties;
 import org.apache.hudi.common.model.HoodieKey;
@@ -232,7 +233,7 @@ public class DataSourceUtils {
     }
   }
 
-  public static JavaRDD<WriteStatus> doWriteOperationRows(HoodieWriteClient client, Dataset<Row> rows,
+  public static Dataset<InterimWriteStatus> doWriteOperationRows(HoodieWriteClient client, Dataset<Row> rows,
                                                       String instantTime, String operation) throws HoodieException {
     // default is upsert
     return client.bulkInsertRows(rows, instantTime);
