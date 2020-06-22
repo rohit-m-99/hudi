@@ -85,7 +85,6 @@ public class HudiRowParquetMapPartitionFunc implements MapPartitionsFunction<Row
           config.set("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MILLIS");
           ParquetWriteSupport writeSupport = new ParquetWriteSupport();
           writeSupport.setSchema(firstRow.schema(), config);
-          System.out.println("Compression codec " + CompressionCodecName.fromConf(compressionCodec));
           ParquetWriter<InternalRow> writer = new ParquetWriter<InternalRow>(preFilePath, writeSupport, CompressionCodecName.fromConf(compressionCodec), ParquetWriter.DEFAULT_BLOCK_SIZE,
               DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_IS_DICTIONARY_ENABLED, DEFAULT_IS_VALIDATING_ENABLED, DEFAULT_WRITER_VERSION,
               config);
@@ -102,7 +101,6 @@ public class HudiRowParquetMapPartitionFunc implements MapPartitionsFunction<Row
           }
           writer.close();
         }
-        System.out.println("Total rows for this partition " + count);
         LOG.info("Write complete :::::::::: ");
         return Collections.singleton(true).iterator();
       } catch (Exception e) {

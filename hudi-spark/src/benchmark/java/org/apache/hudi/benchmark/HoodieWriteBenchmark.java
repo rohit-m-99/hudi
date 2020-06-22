@@ -99,12 +99,12 @@ public class HoodieWriteBenchmark {
    * Benchmarks bulk insert in Hudi
    */
   @Fork(value = 1)
-  @Benchmark
+  //@Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @Warmup(iterations = 1)
-  @Measurement(iterations = 1)
+  @Measurement(iterations = 5)
   @OutputTimeUnit(TimeUnit.SECONDS)
-  public void benchmarkBulkInsertRows(WriteBenchmarkExecutionPlan plan) throws Exception {
+  public void benchmarkBulkInsertRowsUseJavaRdd(WriteBenchmarkExecutionPlan plan) throws Exception {
     try {
       String randomPath = UUID.randomUUID().toString();
       org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
@@ -123,10 +123,10 @@ public class HoodieWriteBenchmark {
    * Benchmarks bulk insert in Hudi
    */
   @Fork(value = 1)
-  @Benchmark
+  //@Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @Warmup(iterations = 1)
-  @Measurement(iterations = 1)
+  @Measurement(iterations = 5)
   @OutputTimeUnit(TimeUnit.SECONDS)
   public void benchmarkBulkInsertRowsUseCollect(WriteBenchmarkExecutionPlan plan) throws Exception {
     try {
@@ -134,7 +134,31 @@ public class HoodieWriteBenchmark {
       org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
       plan.fs.mkdirs(tablePath);
       doWrites(plan.inputDF, tablePath, plan.parallelism, DataSourceWriteOptions.BULK_INSERT_ROWS_OPERATION_OPT_VAL(),
-          false, false, false);
+          false, false, false, false);
+    } catch (Throwable e) {
+      e.printStackTrace();
+      throw new Exception("Exception thrown while running benchmark", e);
+    } finally {
+      FileUtils.deleteDirectory(new File(plan.basePath + "/" + pathPrefix));
+    }
+  }
+
+  /**
+   * Benchmarks bulk insert in Hudi
+   */
+  @Fork(value = 1)
+  //@Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 1)
+  @Measurement(iterations = 5)
+  @OutputTimeUnit(TimeUnit.SECONDS)
+  public void benchmarkBulkInsertRowsUseCollectAsList(WriteBenchmarkExecutionPlan plan) throws Exception {
+    try {
+      String randomPath = UUID.randomUUID().toString();
+      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
+      plan.fs.mkdirs(tablePath);
+      doWrites(plan.inputDF, tablePath, plan.parallelism, DataSourceWriteOptions.BULK_INSERT_ROWS_OPERATION_OPT_VAL(),
+          false, false, false, true);
     } catch (Throwable e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while running benchmark", e);
@@ -153,7 +177,7 @@ public class HoodieWriteBenchmark {
   @Warmup(iterations = 1)
   @Measurement(iterations = 3)
   @OutputTimeUnit(TimeUnit.SECONDS)
-  public void benchmarkBulkInsertRowsDirectWrite(WriteBenchmarkExecutionPlan plan) throws Exception {
+  public void benchmarkBulkInsertRowsHudiDirectWrite(WriteBenchmarkExecutionPlan plan) throws Exception {
     try {
       String randomPath = UUID.randomUUID().toString();
       org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
@@ -220,7 +244,7 @@ public class HoodieWriteBenchmark {
    * Benchmarks bulk insert in Hudi
    */
   @Fork(value = 1)
-  // @Benchmark
+  @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @Warmup(iterations = 1)
   @Measurement(iterations = 3)
@@ -235,18 +259,17 @@ public class HoodieWriteBenchmark {
       e.printStackTrace();
       throw new Exception("Exception thrown while running benchmark", e);
     } finally {
-      Thread.sleep(Long.MAX_VALUE);
       FileUtils.deleteDirectory(new File(plan.basePath + "/" + pathPrefix));
     }
   }
 
   private void doWrites(Dataset<Row> inputDF1, org.apache.hadoop.fs.Path tablePath, int parallelism, String operation,
       boolean ignoreMetadaFieldsForBulkInsert, boolean ignoreCanWriteCheck) {
-    doWrites(inputDF1, tablePath, parallelism, operation, ignoreMetadaFieldsForBulkInsert, ignoreCanWriteCheck, true);
+    doWrites(inputDF1, tablePath, parallelism, operation, ignoreMetadaFieldsForBulkInsert, ignoreCanWriteCheck, true, false);
   }
 
   private void doWrites(Dataset<Row> inputDF1, org.apache.hadoop.fs.Path tablePath, int parallelism, String operation,
-      boolean ignoreMetadaFieldsForBulkInsert, boolean ignoreCanWriteCheck, boolean useJavaRDD) {
+      boolean ignoreMetadaFieldsForBulkInsert, boolean ignoreCanWriteCheck, boolean useJavaRDD, boolean useCollectAsList) {
     DataFrameWriter<Row> writer = inputDF1.write().format("org.apache.hudi")
         // set all parallelism for now
         .option("hoodie.insert.shuffle.parallelism", parallelism)
@@ -268,6 +291,8 @@ public class HoodieWriteBenchmark {
         .option("ignore.can.write.check.bulk.insert", String.valueOf(ignoreCanWriteCheck))
         // use Java Rdd or use collect in Dataset
         .option("use.java.rdd.interim.write.status", String.valueOf(useJavaRDD))
+        // if not for Java Rdd, whether to use collect or collectAsList
+        .option("use.collect.as.list.rdd.interim.write.status",String.valueOf(useCollectAsList))
         // Used by hive sync and queries
         .option(HoodieWriteConfig.TABLE_NAME, "bulk_insert_test_tbl")
         // Add Key Extractor
@@ -281,7 +306,7 @@ public class HoodieWriteBenchmark {
     inpurtDf.sort("partition", "_row_key")
         .coalesce(parallelism)
         .write().format("parquet")
-        .mode(SaveMode.Overwrite)
+        .mode(SaveMode.Append)
         .save(tablePath.toString());
   }
 

@@ -148,7 +148,6 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload> e
 
   private boolean commitInterim(String instantTime, Dataset<InterimWriteStatus> writeStatuses,
       Option<Map<String, String>> extraMetadata, String actionType) {
-
     LOG.info("Committing " + instantTime);
     // Create a Hoodie table which encapsulated the commits and files visible
     HoodieTable<T> table = HoodieTable.create(config, jsc);
@@ -158,13 +157,18 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload> e
     // List<HoodieWriteStat> stats = writeStatuses.map(WriteStatus::getStat).collect();
     List<HoodieWriteStat> stats = new ArrayList<>();
     if (config.useJavaRddForInterimWriteStatus()) {
-      System.out.println("Using to JavaRDD");
       stats = writeStatuses.toJavaRDD().map(entry -> entry.getStat()).collect();
     } else {
-      System.out.println("Using collect");
-      List<InterimWriteStatus> interimWriteStatuses = writeStatuses.collectAsList();
-      for (InterimWriteStatus interimWriteStatus : interimWriteStatuses) {
-        stats.add(interimWriteStatus.getStat());
+      if (config.useCollectAsListForInterimWriteStatus()) {
+        List<InterimWriteStatus> interimWriteStatuses = writeStatuses.collectAsList();
+        for (InterimWriteStatus interimWriteStatus : interimWriteStatuses) {
+          stats.add(interimWriteStatus.getStat());
+        }
+      } else {
+        InterimWriteStatus[] statuses = (InterimWriteStatus[])writeStatuses.collect();
+        for (InterimWriteStatus interimWriteStatus : statuses) {
+          stats.add(interimWriteStatus.getStat());
+        }
       }
       /*
         stats = result.getInterimWriteStatusDataset().map(

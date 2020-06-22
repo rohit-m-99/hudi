@@ -93,6 +93,8 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
 
   private static final String USE_JAVA_RDD_INTERIM_WRITE_STATUS = "use.java.rdd.interim.write.status";
 
+  private static final String USE_COLLECT_AS_LIST_INTERIM_WRITE_STATUS = "use.collect.as.list.rdd.interim.write.status";
+
   private static final String EMBEDDED_TIMELINE_SERVER_ENABLED = "hoodie.embed.timeline.server";
   private static final String DEFAULT_EMBEDDED_TIMELINE_SERVER_ENABLED = "false";
 
@@ -252,6 +254,10 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
 
   public boolean useJavaRddForInterimWriteStatus() {
     return Boolean.parseBoolean(props.getProperty(USE_JAVA_RDD_INTERIM_WRITE_STATUS, "true"));
+  }
+
+  public boolean useCollectAsListForInterimWriteStatus() {
+    return Boolean.parseBoolean(props.getProperty(USE_COLLECT_AS_LIST_INTERIM_WRITE_STATUS, "false"));
   }
 
   /**
@@ -749,6 +755,11 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
 
     public Builder withUseJavaRddForInterimWriteStatus(boolean useJavaRdd) {
       props.setProperty(USE_JAVA_RDD_INTERIM_WRITE_STATUS, String.valueOf(useJavaRdd));
+      return this;
+    }
+
+    public Builder withUseCollectAsListForInterimWriteStatus(boolean useJavaRdd) {
+      props.setProperty(USE_COLLECT_AS_LIST_INTERIM_WRITE_STATUS, String.valueOf(useJavaRdd));
       return this;
     }
 

@@ -195,6 +195,9 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload<T>>
 
   private void commit(Option<Map<String, String>> extraMetadata, HoodieWriteMetadata result) {
     String actionType = table.getMetaClient().getCommitActionType();
+
+    System.out.println("Use Java RDD config value 111 path " + config.useJavaRddForInterimWriteStatus());
+
     LOG.info("Committing " + instantTime + ", action Type " + actionType);
     // Create a Hoodie table which encapsulated the commits and files visible
     HoodieTable<T> table = HoodieTable.create(config, jsc);
@@ -225,14 +228,14 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload<T>>
         */
       }
     }
-    System.out.println("Complete populating list of write stats");
+    /*System.out.println("Complete populating list of write stats");
     long totalWrites = 0;
     long totalInserts = 0;
     for (HoodieWriteStat stat : stats) {
       totalWrites += stat.getNumWrites();
       totalInserts += stat.getNumInserts();
     }
-    System.out.println("Total writes " + totalWrites + ", total inserts " + totalInserts);
+    System.out.println("Total writes " + totalWrites + ", total inserts " + totalInserts);*/
     result.setWriteStats(stats);
     updateMetadataAndRollingStats(metadata, stats);
 

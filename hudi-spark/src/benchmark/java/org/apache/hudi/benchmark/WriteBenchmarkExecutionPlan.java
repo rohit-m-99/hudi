@@ -48,8 +48,8 @@ public class WriteBenchmarkExecutionPlan {
   public String iterationIndex;
 
   String basePath = "/tmp/hudi_benchmark/";
-  int totalRecordsToTest = 100;
-  int parallelism = 1;
+  int totalRecordsToTest = 1000000;
+  int parallelism = 100;
   SparkSession spark;
   JavaSparkContext jssc;
   FileSystem fs;
@@ -67,7 +67,7 @@ public class WriteBenchmarkExecutionPlan {
       dataGen = new HoodieTestDataGenerator();
       List<HoodieRecord> recordsSoFar = new ArrayList<>(dataGen.generateInserts("001", totalRecordsToTest));
       List<String> records = DataSourceTestUtils.convertToStringList(recordsSoFar);
-      inputDF = spark.read().json(jssc.parallelize(records, 10));
+      inputDF = spark.read().json(jssc.parallelize(records, 500));
     } catch (IOException e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while generating records to write ", e);

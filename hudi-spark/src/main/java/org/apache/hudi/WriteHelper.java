@@ -36,7 +36,7 @@ import java.io.IOException;
 public class WriteHelper {
 
   static Dataset<Boolean> writeToParquet(Dataset<Row> rows, String basePath, ExpressionEncoder<Row> encoder, SerializableConfiguration serConfig, int parallelism,
-      String compressionCodec) throws IOException {
+      String compressionCodec, String partitionPathProp, String recordKeyProp) throws IOException {
 
     try {
       Path basePathDir = new Path(basePath);
@@ -44,7 +44,7 @@ public class WriteHelper {
       if (!fs.exists(basePathDir)) {
         fs.mkdirs(basePathDir);
       }
-      return rows.sort("partition", "_row_key").coalesce(parallelism)
+      return rows.sort(partitionPathProp, recordKeyProp).coalesce(parallelism)
           .mapPartitions(new HudiRowParquetMapPartitionFunc(basePath, encoder, serConfig, compressionCodec), Encoders.BOOLEAN());
     } catch (Exception e) {
       System.err.println("Exception thrown in WriteHelper " + e.getCause() + " ... " + e.getMessage());

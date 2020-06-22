@@ -63,8 +63,6 @@ public class BulkInsertHelperRows {
       Option<UserDefinedBulkInsertPartitioner> bulkInsertPartitioner) {
     HoodieWriteMetadata result = new HoodieWriteMetadata();
 
-    System.out.println("Ignore meta fields " + config.ignoreMetadataFieldsBulkInsert() + ", avoid can write check " + config.ignoreCanWriteBulkInsert());
-
     // De-dupe/merge if needed
     Dataset<Row> dedupedRecords = inputRecords;
 
@@ -115,20 +113,18 @@ public class BulkInsertHelperRows {
         LOG.info("Write status : " + writeStatus);
       }*/
 
-      List<InterimWriteStatus> interimWriteStatuses = interimWriteStatusDataset.collectAsList();
+      /*List<InterimWriteStatus> interimWriteStatuses = interimWriteStatusDataset.collectAsList();
       System.out.println("Total interim write status " + interimWriteStatuses.size());
       for (InterimWriteStatus interimWriteStatus : interimWriteStatuses) {
         System.out.println("Interim " + interimWriteStatus + " :: Write stat " + interimWriteStatus.getStat());
-      }
+      }*/
 
-      System.out.println("Calling update index adn commit if needed");
       executor.updateIndexAndCommitIfNeeded(interimWriteStatusDataset, result);
       return result;
     } catch (Throwable e) {
       LOG.error("Throwable thrwon in map partition func ", e);
       throw e;
     }
-
   }
 
   private static ExpressionEncoder getEncoder(StructType schema) {
