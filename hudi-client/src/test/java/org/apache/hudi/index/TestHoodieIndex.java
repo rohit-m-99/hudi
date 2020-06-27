@@ -47,7 +47,9 @@ import org.apache.hudi.exception.HoodieException;
 import org.apache.hudi.exception.HoodieIndexException;
 import org.apache.hudi.index.HoodieIndex.IndexType;
 import org.apache.hudi.index.bloom.HoodieBloomIndex;
+import org.apache.hudi.index.bloom.HoodieBloomIndexV2;
 import org.apache.hudi.index.bloom.HoodieGlobalBloomIndex;
+import org.apache.hudi.index.bloom.HoodieGlobalBloomIndexV2;
 import org.apache.hudi.index.hbase.HBaseIndex;
 import org.apache.hudi.index.simple.HoodieSimpleIndex;
 import org.apache.hudi.table.HoodieTable;
@@ -116,7 +118,7 @@ public class TestHoodieIndex extends HoodieClientTestHarness {
   }
 
   @ParameterizedTest
-  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE", "HBASE"})
+  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE", "HBASE","BLOOM_V2","GLOBAL_BLOOM_V2"})
   public void testCreateIndex(IndexType indexType) throws Exception {
     setUp(indexType, false);
     HoodieWriteConfig.Builder clientConfigBuilder = HoodieWriteConfig.newBuilder();
@@ -148,6 +150,16 @@ public class TestHoodieIndex extends HoodieClientTestHarness {
                 .withHBaseIndexConfig(new HoodieHBaseIndexConfig.Builder().build()).build())
             .build();
         assertTrue(HoodieIndex.createIndex(config) instanceof HBaseIndex);
+        break;
+      case BLOOM_V2:
+        config = clientConfigBuilder.withPath(basePath)
+            .withIndexConfig(indexConfigBuilder.withIndexType(IndexType.BLOOM_V2).build()).build();
+        assertTrue(HoodieIndex.createIndex(config) instanceof HoodieBloomIndexV2);
+        break;
+      case GLOBAL_BLOOM_V2:
+        config = clientConfigBuilder.withPath(basePath)
+            .withIndexConfig(indexConfigBuilder.withIndexType(IndexType.GLOBAL_BLOOM_V2).build()).build();
+        assertTrue(HoodieIndex.createIndex(config) instanceof HoodieGlobalBloomIndexV2);
         break;
       default:
         // no -op. just for checkstyle errors
@@ -185,7 +197,7 @@ public class TestHoodieIndex extends HoodieClientTestHarness {
   }
 
   @ParameterizedTest
-  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE"})
+  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE","BLOOM_V2","GLOBAL_BLOOM_V2"})
   public void testSimpleTagLocationAndUpdate(IndexType indexType) throws Exception {
     setUp(indexType);
     String newCommitTime = "001";
@@ -235,7 +247,7 @@ public class TestHoodieIndex extends HoodieClientTestHarness {
   }
 
   @ParameterizedTest
-  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE"})
+  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE","BLOOM_V2","GLOBAL_BLOOM_V2"})
   public void testTagLocationAndDuplicateUpdate(IndexType indexType) throws Exception {
     setUp(indexType);
     String newCommitTime = "001";
@@ -285,7 +297,7 @@ public class TestHoodieIndex extends HoodieClientTestHarness {
   }
 
   @ParameterizedTest
-  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE"})
+  @EnumSource(value = IndexType.class, names = {"BLOOM", "GLOBAL_BLOOM", "SIMPLE", "GLOBAL_SIMPLE","BLOOM_V2","GLOBAL_BLOOM_V2"})
   public void testSimpleTagLocationAndUpdateWithRollback(IndexType indexType) throws Exception {
     setUp(indexType);
     String newCommitTime = writeClient.startCommit();
@@ -337,7 +349,7 @@ public class TestHoodieIndex extends HoodieClientTestHarness {
   }
 
   @ParameterizedTest
-  @EnumSource(value = IndexType.class, names = {"BLOOM", "SIMPLE",})
+  @EnumSource(value = IndexType.class, names = {"BLOOM", "SIMPLE","BLOOM_V2"})
   public void testTagLocationAndFetchRecordLocations(IndexType indexType) throws Exception {
     setUp(indexType);
     String rowKey1 = UUID.randomUUID().toString();
@@ -421,8 +433,8 @@ public class TestHoodieIndex extends HoodieClientTestHarness {
   }
 
   @ParameterizedTest
-  @EnumSource(value = IndexType.class, names = {"GLOBAL_SIMPLE"})
-  public void testSimpleGlobalIndexTagLocationWhenShouldUpdatePartitionPath(IndexType indexType) throws Exception {
+  @EnumSource(value = IndexType.class, names = {"GLOBAL_SIMPLE","GLOBAL_BLOOM_V2"})
+  public void testGlobalIndexTagLocationWhenShouldUpdatePartitionPath(IndexType indexType) throws Exception {
     setUp(indexType);
     config = getConfigBuilder()
         .withIndexConfig(HoodieIndexConfig.newBuilder().withIndexType(indexType)

@@ -30,7 +30,9 @@ import org.apache.hudi.common.util.collection.Pair;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieIndexException;
 import org.apache.hudi.index.bloom.HoodieBloomIndex;
+import org.apache.hudi.index.bloom.HoodieBloomIndexV2;
 import org.apache.hudi.index.bloom.HoodieGlobalBloomIndex;
+import org.apache.hudi.index.bloom.HoodieGlobalBloomIndexV2;
 import org.apache.hudi.index.hbase.HBaseIndex;
 import org.apache.hudi.index.simple.HoodieGlobalSimpleIndex;
 import org.apache.hudi.index.simple.HoodieSimpleIndex;
@@ -76,6 +78,10 @@ public abstract class HoodieIndex<T extends HoodieRecordPayload> implements Seri
         return new HoodieSimpleIndex<>(config);
       case GLOBAL_SIMPLE:
         return new HoodieGlobalSimpleIndex<>(config);
+      case BLOOM_V2:
+        return new HoodieBloomIndexV2<>(config);
+      case GLOBAL_BLOOM_V2:
+        return new HoodieGlobalBloomIndexV2<>(config);
       default:
         throw new HoodieIndexException("Index type unspecified, set " + config.getIndexType());
     }
@@ -138,6 +144,6 @@ public abstract class HoodieIndex<T extends HoodieRecordPayload> implements Seri
   }
 
   public enum IndexType {
-    HBASE, INMEMORY, BLOOM, GLOBAL_BLOOM, SIMPLE, GLOBAL_SIMPLE
+    HBASE, INMEMORY, BLOOM, GLOBAL_BLOOM, SIMPLE, GLOBAL_SIMPLE, BLOOM_V2, GLOBAL_BLOOM_V2
   }
 }

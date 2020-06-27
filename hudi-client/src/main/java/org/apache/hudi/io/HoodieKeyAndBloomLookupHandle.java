@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Takes a bunch of keys and returns ones that are present in the file group.
+ * Takes a bunch of record keys and returns ones that are present in the file group.
  */
 public class HoodieKeyAndBloomLookupHandle<T extends HoodieRecordPayload> extends HoodieReadHandle<T> {
 
