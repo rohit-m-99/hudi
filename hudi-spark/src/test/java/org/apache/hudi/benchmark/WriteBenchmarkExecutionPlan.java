@@ -18,11 +18,13 @@
 
 package org.apache.hudi.benchmark;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hudi.common.HoodieTestDataGenerator;
 import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.utils.DataSourceTestUtils;
-
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -33,23 +35,19 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 /**
- * Execution plan for benchmarking. This has set up methods and acts as arguments to benchmark methods
+ * Execution plan for benchmarking. This has set up methods and acts as arguments to benchmark
+ * methods.
  */
 @State(Scope.Benchmark)
 public class WriteBenchmarkExecutionPlan {
 
-  @Param( {"itr1"})
+  @Param({"itr1"})
   public String iterationIndex;
 
   String basePath = "/tmp/hudi_benchmark/";
-  int totalRecordsToTest = 1000;
-  int parallelism = 1;
+  int totalRecordsToTest = 600000;
+  int parallelism = 3;
   SparkSession spark;
   JavaSparkContext jssc;
   FileSystem fs;
@@ -60,14 +58,16 @@ public class WriteBenchmarkExecutionPlan {
   public void doSetup() throws Exception {
     try {
       spark = SparkSession.builder().appName("Hoodie Write Benchmark")
-          .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer").master("local[2]").getOrCreate();
+          .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+          .master("local[2]").getOrCreate();
       jssc = new JavaSparkContext(spark.sparkContext());
       spark.sparkContext().setLogLevel("WARN");
       fs = FileSystem.get(jssc.hadoopConfiguration());
       dataGen = new HoodieTestDataGenerator();
-      List<HoodieRecord> recordsSoFar = new ArrayList<>(dataGen.generateInserts("001", totalRecordsToTest));
+      List<HoodieRecord> recordsSoFar = new ArrayList<>(
+          dataGen.generateInserts("001", totalRecordsToTest));
       List<String> records = DataSourceTestUtils.convertToStringList(recordsSoFar);
-      inputDF = spark.read().json(jssc.parallelize(records, 1));
+      inputDF = spark.read().json(jssc.parallelize(records, 5));
     } catch (IOException e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while generating records to write ", e);

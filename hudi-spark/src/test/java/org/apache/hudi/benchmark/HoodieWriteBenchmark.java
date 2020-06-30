@@ -18,12 +18,13 @@
 
 package org.apache.hudi.benchmark;
 
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.fs.Path;
 import org.apache.hudi.DataSourceWriteOptions;
 import org.apache.hudi.common.model.HoodieTableType;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.keygen.SimpleKeyGenerator;
-
-import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -36,19 +37,15 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Warmup;
 
-import java.io.File;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 /**
- * Benchmarks some of the write operations using jmh
+ * Benchmarks some of the write operations using jmh.
  */
 public class HoodieWriteBenchmark {
 
-  private static final String pathPrefix = "hudi-benchmark";
+  private static final String PATH_PREFIX = "hudi-benchmark";
 
   /**
-   * Benchmarks insert in Hudi
+   * Benchmarks insert in Hudi.
    */
   @Fork(value = 1)
   // @Benchmark
@@ -59,19 +56,22 @@ public class HoodieWriteBenchmark {
   public void benchmarkInsert(WriteBenchmarkExecutionPlan plan) throws Exception {
     try {
       String randomPath = UUID.randomUUID().toString();
-      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
+      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(
+          plan.basePath + "/" + PATH_PREFIX
+              + "/" + randomPath);
       plan.fs.mkdirs(tablePath);
-      doWrites(plan.inputDF, tablePath, plan.parallelism, DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL());
+      doWrites(plan.inputDF, tablePath, plan.parallelism,
+          DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL());
     } catch (Throwable e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while running benchmark", e);
     } finally {
-      FileUtils.deleteDirectory(new File(plan.basePath + "/" + pathPrefix));
+      plan.fs.delete(new Path(plan.basePath + "/" + PATH_PREFIX), true);
     }
   }
 
   /**
-   * Benchmarks bulk insert in Hudi
+   * Benchmarks bulk insert in Hudi.
    */
   @Fork(value = 1)
   // @Benchmark
@@ -82,66 +82,77 @@ public class HoodieWriteBenchmark {
   public void benchmarkBulkInsert(WriteBenchmarkExecutionPlan plan) throws Exception {
     try {
       String randomPath = UUID.randomUUID().toString();
-      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
+      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(
+          plan.basePath + "/" + PATH_PREFIX
+              + "/" + randomPath);
       plan.fs.mkdirs(tablePath);
-      doWrites(plan.inputDF, tablePath, plan.parallelism, DataSourceWriteOptions.BULK_INSERT_OPERATION_OPT_VAL());
+      doWrites(plan.inputDF, tablePath, plan.parallelism,
+          DataSourceWriteOptions.BULK_INSERT_OPERATION_OPT_VAL());
     } catch (Throwable e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while running benchmark", e);
     } finally {
-      FileUtils.deleteDirectory(new File(plan.basePath + "/" + pathPrefix));
+      plan.fs.delete(new Path(plan.basePath + "/" + PATH_PREFIX), true);
     }
   }
 
   /**
-   * Benchmarks bulk insert in Hudi
+   * Benchmarks bulk insert in Hudi.
    */
   @Fork(value = 1)
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @Warmup(iterations = 1)
-  @Measurement(iterations = 5)
+  @Measurement(iterations = 1)
   @OutputTimeUnit(TimeUnit.SECONDS)
   public void benchmarkBulkInsertDataset(WriteBenchmarkExecutionPlan plan) throws Exception {
     try {
       String randomPath = UUID.randomUUID().toString();
-      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
+      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(
+          plan.basePath + "/" + PATH_PREFIX
+              + "/" + randomPath);
       plan.fs.mkdirs(tablePath);
-      doWrites(plan.inputDF, tablePath, plan.parallelism, DataSourceWriteOptions.BULK_INSERT_DATASET_OPERATION_OPT_VAL());
+      doWrites(plan.inputDF, tablePath, plan.parallelism,
+          DataSourceWriteOptions.BULK_INSERT_DATASET_OPERATION_OPT_VAL());
+      Thread.sleep(10000000);
     } catch (Throwable e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while running benchmark", e);
     } finally {
-      FileUtils.deleteDirectory(new File(plan.basePath + "/" + pathPrefix));
+      plan.fs.delete(new Path(plan.basePath + "/" + PATH_PREFIX), true);
     }
   }
 
 
   /**
-   * Benchmarks bulk insert in Hudi
+   * Benchmarks bulk insert in Hudi.
    */
   @Fork(value = 1)
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @Warmup(iterations = 1)
-  @Measurement(iterations = 5)
+  @Measurement(iterations = 1)
   @OutputTimeUnit(TimeUnit.SECONDS)
-  public void benchmarkBulkInsertRowsHudiDirectWrite(WriteBenchmarkExecutionPlan plan) throws Exception {
+  public void benchmarkBulkInsertRowsHudiDirectWrite(WriteBenchmarkExecutionPlan plan)
+      throws Exception {
     try {
       String randomPath = UUID.randomUUID().toString();
-      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
+      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(
+          plan.basePath + "/" + PATH_PREFIX
+              + "/" + randomPath);
       plan.fs.mkdirs(tablePath);
-      doWrites(plan.inputDF, tablePath, plan.parallelism, "bulk_insert_direct_parquet_write_support");
+      doWrites(plan.inputDF, tablePath, plan.parallelism,
+          "bulk_insert_direct_parquet_write_support");
     } catch (Throwable e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while running benchmark", e);
     } finally {
-      FileUtils.deleteDirectory(new File(plan.basePath + "/" + pathPrefix));
+      plan.fs.delete(new Path(plan.basePath + "/" + PATH_PREFIX), true);
     }
   }
 
   /**
-   * Benchmarks bulk insert in Hudi
+   * Benchmarks bulk insert in Hudi.
    */
   @Fork(value = 1)
   // @Benchmark
@@ -152,18 +163,21 @@ public class HoodieWriteBenchmark {
   public void benchmarkDirectParquetWrites(WriteBenchmarkExecutionPlan plan) throws Exception {
     try {
       String randomPath = UUID.randomUUID().toString();
-      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(plan.basePath + "/" + pathPrefix + "/" + randomPath);
+      org.apache.hadoop.fs.Path tablePath = new org.apache.hadoop.fs.Path(
+          plan.basePath + "/" + PATH_PREFIX
+              + "/" + randomPath);
       plan.fs.mkdirs(tablePath);
       doDirectParquetWrites(plan.inputDF, tablePath, plan.parallelism);
     } catch (Throwable e) {
       e.printStackTrace();
       throw new Exception("Exception thrown while running benchmark", e);
     } finally {
-      FileUtils.deleteDirectory(new File(plan.basePath + "/" + pathPrefix));
+      plan.fs.delete(new Path(plan.basePath + "/" + PATH_PREFIX), true);
     }
   }
 
-  private void doWrites(Dataset<Row> inputDF1, org.apache.hadoop.fs.Path tablePath, int parallelism, String operation) {
+  private void doWrites(Dataset<Row> inputDF1, org.apache.hadoop.fs.Path tablePath, int parallelism,
+      String operation) {
     DataFrameWriter<Row> writer = inputDF1.write().format("org.apache.hudi")
         // set all parallelism for now
         .option("hoodie.insert.shuffle.parallelism", parallelism)
@@ -182,13 +196,15 @@ public class HoodieWriteBenchmark {
         // Used by hive sync and queries
         .option(HoodieWriteConfig.TABLE_NAME, "bulk_insert_test_tbl")
         // Add Key Extractor
-        .option(DataSourceWriteOptions.KEYGENERATOR_CLASS_OPT_KEY(), SimpleKeyGenerator.class.getCanonicalName())
+        .option(DataSourceWriteOptions.KEYGENERATOR_CLASS_OPT_KEY(),
+            SimpleKeyGenerator.class.getCanonicalName())
         // This will remove any existing data at path below, and create a
         .mode(SaveMode.Overwrite);
     writer.save(tablePath.toString());
   }
 
-  private void doDirectParquetWrites(Dataset<Row> inpurtDf, org.apache.hadoop.fs.Path tablePath, int parallelism) {
+  private void doDirectParquetWrites(Dataset<Row> inpurtDf, org.apache.hadoop.fs.Path tablePath,
+      int parallelism) {
     inpurtDf.sort("partition", "_row_key")
         .coalesce(parallelism)
         .write().format("parquet")
