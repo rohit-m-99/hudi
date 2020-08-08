@@ -280,7 +280,7 @@ public class ITTestHoodieDemo extends ITTestBase {
     assertStdOutContains(stdOutErrPair, "stock_ticks_cow", 2);
     assertStdOutContains(stdOutErrPair, "stock_ticks_mor",4);
 
-    stdOutErrPair = executePrestoCommandFile(HDFS_PRESTO_INPUT_BATCH1_PATH);
+    stdOutErrPair = executePrestoCommandFile(HDFS_PRESTO_INPUT_BATCH1_PATH, true);
     assertStdOutContains(stdOutErrPair,
         "\"GOOG\",\"2018-08-31 10:29:00\"", 4);
     assertStdOutContains(stdOutErrPair,

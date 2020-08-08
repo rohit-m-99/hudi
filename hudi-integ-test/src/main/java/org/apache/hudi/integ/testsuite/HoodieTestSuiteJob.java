@@ -143,6 +143,7 @@ public class HoodieTestSuiteJob {
       log.error("Failed to run Test Suite ", e);
       throw new HoodieException("Failed to run Test Suite ", e);
     } finally {
+      sparkSession.stop();
       jsc.stop();
     }
   }

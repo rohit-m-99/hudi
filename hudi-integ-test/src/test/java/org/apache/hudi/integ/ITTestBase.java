@@ -116,7 +116,15 @@ public abstract class ITTestBase {
   }
 
   static String getPrestoConsoleCommand(String commandFile) {
-    StringBuilder builder = new StringBuilder().append("presto --server " + PRESTO_COORDINATOR_URL)
+    return getPrestoConsoleCommand(commandFile, false);
+  }
+
+  static String getPrestoConsoleCommand(String commandFile, boolean debug) {
+    StringBuilder builder = new StringBuilder().append("presto ");
+    if(debug) {
+      builder.append(" --debug ");
+    }
+    builder.append(" --server " + PRESTO_COORDINATOR_URL)
         .append(" --catalog hive --schema default")
         .append(" -f " + commandFile);
     System.out.println("Presto comamnd " + builder.toString());
@@ -238,7 +246,11 @@ public abstract class ITTestBase {
   }
 
   Pair<String, String> executePrestoCommandFile(String commandFile) throws Exception {
-    String prestoCmd = getPrestoConsoleCommand(commandFile);
+    return executePrestoCommandFile(commandFile, false);
+  }
+
+  Pair<String, String> executePrestoCommandFile(String commandFile, boolean debug) throws Exception {
+    String prestoCmd = getPrestoConsoleCommand(commandFile, debug);
     TestExecStartResultCallback callback = executeCommandStringInDocker(PRESTO_COORDINATOR, prestoCmd, true);
     return Pair.of(callback.getStdout().toString().trim(), callback.getStderr().toString().trim());
   }
