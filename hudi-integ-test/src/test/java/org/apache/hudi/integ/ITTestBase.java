@@ -110,7 +110,15 @@ public abstract class ITTestBase {
   }
 
   static String getSparkShellCommand(String commandFile) {
-    StringBuilder builder = new StringBuilder().append("spark-shell --jars ").append(HUDI_SPARK_BUNDLE)
+    return getSparkShellCommand(commandFile, false);
+  }
+
+  static String getSparkShellCommand(String commandFile, boolean verbose) {
+    StringBuilder builder = new StringBuilder().append("spark-shell ");
+    if(verbose){
+      builder.append(" --verbose ");
+    }
+    builder.append(" --jars ").append(HUDI_SPARK_BUNDLE)
         .append(" --master local[2] --driver-class-path ").append(HADOOP_CONF_DIR)
         .append(
             " --conf spark.sql.hive.convertMetastoreParquet=false --deploy-mode client  --driver-memory 1G --executor-memory 1G --num-executors 1 ")
@@ -243,7 +251,11 @@ public abstract class ITTestBase {
   }
 
   Pair<String, String> executeSparkSQLCommand(String commandFile, boolean expectedToSucceed) throws Exception {
-    String sparkShellCmd = getSparkShellCommand(commandFile);
+    return executeSparkSQLCommand(commandFile, expectedToSucceed, false);
+  }
+
+  Pair<String, String> executeSparkSQLCommand(String commandFile, boolean expectedToSucceed, boolean verbose) throws Exception {
+    String sparkShellCmd = getSparkShellCommand(commandFile, verbose);
     TestExecStartResultCallback callback =
         executeCommandStringInDocker(ADHOC_1_CONTAINER, sparkShellCmd, expectedToSucceed);
     return Pair.of(callback.getStdout().toString(), callback.getStderr().toString());

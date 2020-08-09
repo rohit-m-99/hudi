@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+sc.setLogLevel("DEBUG")
+
 spark.sql("show tables").show(100, false)
 
 // Bootstrapped Copy-On-Write table

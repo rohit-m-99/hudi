@@ -237,7 +237,7 @@ public class ITTestHoodieDemo extends ITTestBase {
   }
 
   private void testSparkSQLBoostrapAfterFirstBatch() throws Exception {
-    Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BOOTSTRAP_BATCH1_COMMANDS, true);
+    Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BOOTSTRAP_BATCH1_COMMANDS, true, true);
     assertStdOutContains(stdOutErrPair, "|default |stock_ticks_cow_bs   |false      |\n"
         + "|default |stock_ticks_mor_bs_ro |false      |\n"
         +  "|default |stock_ticks_mor_bs_rt |false      |");
@@ -370,7 +370,7 @@ public class ITTestHoodieDemo extends ITTestBase {
   }
 
   private void testSparkSQLBootstrapAfterSecondBatch() throws Exception {
-    Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BOOTSTRAP_BATCH2_COMMANDS, true);
+    Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BOOTSTRAP_BATCH2_COMMANDS, true, true);
     assertStdOutContains(stdOutErrPair,
         "+------+-------------------+\n|GOOG  |2018-08-31 10:59:00|\n+------+-------------------+", 4);
 
