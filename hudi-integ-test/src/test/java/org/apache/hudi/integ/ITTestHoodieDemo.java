@@ -67,7 +67,9 @@ public class ITTestHoodieDemo extends ITTestBase {
   private static final String COMPACTION_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/compaction.commands";
   private static final String SPARKSQL_BS_PREP_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/sparksql-bootstrap-prep-source.commands";
   private static final String SPARKSQL_BATCH1_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/sparksql-batch1.commands";
+  private static final String SPARKSQL_BOOTSTRAP_BATCH1_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/sparksql-bootstrap.batch1.commands";
   private static final String SPARKSQL_BATCH2_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/sparksql-batch2.commands";
+  private static final String SPARKSQL_BOOTSTRAP_BATCH2_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/sparksql-boostrap.batch2.commands";
   private static final String SPARKSQL_INCREMENTAL_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/sparksql-incremental.commands";
   private static final String HIVE_TBLCHECK_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/hive-table-check.commands";
   private static final String HIVE_BATCH1_COMMANDS = HOODIE_WS_ROOT + "/docker/demo/hive-batch1.commands";
@@ -97,12 +99,14 @@ public class ITTestHoodieDemo extends ITTestBase {
     testHiveAfterFirstBatch();
     testPrestoAfterFirstBatch();
     testSparkSQLAfterFirstBatch();
+    testSparkSQLBoostrapAfterFirstBatch();
 
     // batch 2
     ingestSecondBatchAndHiveSync();
     testHiveAfterSecondBatch();
     testPrestoAfterSecondBatch();
     testSparkSQLAfterSecondBatch();
+    testSparkSQLBootstrapAfterSecondBatch();
     testIncrementalHiveQueryBeforeCompaction();
     testIncrementalSparkSQLQuery();
 
@@ -224,11 +228,20 @@ public class ITTestHoodieDemo extends ITTestBase {
   private void testSparkSQLAfterFirstBatch() throws Exception {
     Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BATCH1_COMMANDS, true);
     assertStdOutContains(stdOutErrPair, "|default |stock_ticks_cow   |false      |\n"
-                                                    + "|default |stock_ticks_cow_bs   |false      |\n"
-                                                    + "|default |stock_ticks_mor_bs_ro |false      |\n"
-                                                    +  "|default |stock_ticks_mor_bs_rt |false      |"
                                                     + "|default |stock_ticks_mor_ro |false      |\n"
                                                     +  "|default |stock_ticks_mor_rt |false      |");
+    assertStdOutContains(stdOutErrPair,
+        "+------+-------------------+\n|GOOG  |2018-08-31 10:29:00|\n+------+-------------------+", 6);
+    assertStdOutContains(stdOutErrPair, "|GOOG  |2018-08-31 09:59:00|6330  |1230.5   |1230.02 |", 6);
+    assertStdOutContains(stdOutErrPair, "|GOOG  |2018-08-31 10:29:00|3391  |1230.1899|1230.085|", 6);
+  }
+
+  private void testSparkSQLBoostrapAfterFirstBatch() throws Exception {
+    Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BOOTSTRAP_BATCH1_COMMANDS, true);
+    assertStdOutContains(stdOutErrPair, "|default |stock_ticks_cow_bs   |false      |\n"
+        + "|default |stock_ticks_mor_bs_ro |false      |\n"
+        +  "|default |stock_ticks_mor_bs_rt |false      |");
+
     assertStdOutContains(stdOutErrPair,
         "+------+-------------------+\n|GOOG  |2018-08-31 10:29:00|\n+------+-------------------+", 6);
     assertStdOutContains(stdOutErrPair, "|GOOG  |2018-08-31 09:59:00|6330  |1230.5   |1230.02 |", 6);
@@ -346,6 +359,18 @@ public class ITTestHoodieDemo extends ITTestBase {
 
   private void testSparkSQLAfterSecondBatch() throws Exception {
     Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BATCH2_COMMANDS, true);
+    assertStdOutContains(stdOutErrPair,
+        "+------+-------------------+\n|GOOG  |2018-08-31 10:59:00|\n+------+-------------------+", 4);
+
+    assertStdOutContains(stdOutErrPair, "|GOOG  |2018-08-31 09:59:00|6330  |1230.5   |1230.02 |", 6);
+    assertStdOutContains(stdOutErrPair, "|GOOG  |2018-08-31 10:59:00|9021  |1227.1993|1227.215|", 4);
+    assertStdOutContains(stdOutErrPair,
+        "+------+-------------------+\n|GOOG  |2018-08-31 10:29:00|\n+------+-------------------+", 2);
+    assertStdOutContains(stdOutErrPair, "|GOOG  |2018-08-31 10:29:00|3391  |1230.1899|1230.085|", 2);
+  }
+
+  private void testSparkSQLBootstrapAfterSecondBatch() throws Exception {
+    Pair<String, String> stdOutErrPair = executeSparkSQLCommand(SPARKSQL_BOOTSTRAP_BATCH2_COMMANDS, true);
     assertStdOutContains(stdOutErrPair,
         "+------+-------------------+\n|GOOG  |2018-08-31 10:59:00|\n+------+-------------------+", 4);
 
