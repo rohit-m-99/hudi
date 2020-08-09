@@ -80,7 +80,7 @@ public class TestDFSHoodieTestSuiteWriterAdapter extends UtilitiesTestBase {
     super.teardown();
   }
 
-  @Test
+  //@Test
   public void testDFSOneFileWrite() throws IOException {
 
     DeltaInputWriter<GenericRecord> mockFileSinkWriter = Mockito.mock(AvroFileDeltaInputWriter.class);
@@ -98,7 +98,7 @@ public class TestDFSHoodieTestSuiteWriterAdapter extends UtilitiesTestBase {
     Mockito.verify(mockFileSinkWriter, times(1)).close();
   }
 
-  @Test
+  //@Test
   public void testDFSTwoFilesWriteWithRollover() throws IOException {
 
     DeltaInputWriter<GenericRecord> mockFileSinkWriter = Mockito.mock(AvroFileDeltaInputWriter.class);
@@ -118,7 +118,7 @@ public class TestDFSHoodieTestSuiteWriterAdapter extends UtilitiesTestBase {
     Mockito.verify(mockFileSinkWriter, times(2)).close();
   }
 
-  @Test
+  //@Test
   public void testDFSWorkloadSinkWithMultipleFilesFunctional() throws IOException {
     DeltaConfig dfsSinkConfig = new DFSDeltaConfig(DeltaOutputMode.DFS, DeltaInputType.AVRO,
         new SerializableConfiguration(jsc.hadoopConfiguration()), dfsBasePath, dfsBasePath,

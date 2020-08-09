@@ -138,7 +138,7 @@ public class TestHoodieTestSuiteJob extends UtilitiesTestBase {
   // Tests in this class add to the test build time significantly. Since this is a Integration Test (end to end), we
   // would like to run this as a nightly build which is a TODO.
   // TODO : Clean up input / result paths after each test
-  @MethodSource("configParams")
+  //@MethodSource("configParams")
   public void testDagWithInsertUpsertAndValidate(boolean useDeltaStreamer, String tableType) throws Exception {
     dfs.delete(new Path(dfsBasePath + "/input"), true);
     dfs.delete(new Path(dfsBasePath + "/result"), true);
@@ -152,7 +152,7 @@ public class TestHoodieTestSuiteJob extends UtilitiesTestBase {
     assertEquals(metaClient.getActiveTimeline().getCommitsTimeline().getInstants().count(), 2);
   }
 
-  @MethodSource("configParams")
+  //@MethodSource("configParams")
   public void testHiveSync(boolean useDeltaStreamer, String tableType) throws Exception {
     dfs.delete(new Path(dfsBasePath + "/input"), true);
     dfs.delete(new Path(dfsBasePath + "/result"), true);
@@ -170,7 +170,7 @@ public class TestHoodieTestSuiteJob extends UtilitiesTestBase {
     assertEquals(metaClient.getActiveTimeline().getCommitsTimeline().getInstants().count(), 1);
   }
 
-  @MethodSource("configParams")
+  //@MethodSource("configParams")
   public void testCOWFullDagFromYaml(boolean useDeltaStreamer, String tableType) throws Exception {
     dfs.delete(new Path(dfsBasePath + "/input"), true);
     dfs.delete(new Path(dfsBasePath + "/result"), true);
@@ -185,7 +185,7 @@ public class TestHoodieTestSuiteJob extends UtilitiesTestBase {
     assertEquals(metaClient.getActiveTimeline().getCommitsTimeline().getInstants().count(), 5);
   }
 
-  @MethodSource("configParams")
+  //@MethodSource("configParams")
   public void testMORFullDagFromYaml(boolean useDeltaStreamer, String tableType) throws Exception {
     dfs.delete(new Path(dfsBasePath + "/input"), true);
     dfs.delete(new Path(dfsBasePath + "/result"), true);
