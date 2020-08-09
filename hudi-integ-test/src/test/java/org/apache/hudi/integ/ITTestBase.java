@@ -104,15 +104,19 @@ public abstract class ITTestBase {
     if (additionalVar != null) {
       builder.append(" --hivevar " + additionalVar + " ");
     }
-    return builder.append(" -f ").append(commandFile).toString();
+    builder.append(" -f ").append(commandFile);
+    System.out.println("Hive command :: " + builder.toString());
+    return builder.toString();
   }
 
   static String getSparkShellCommand(String commandFile) {
-    return new StringBuilder().append("spark-shell --jars ").append(HUDI_SPARK_BUNDLE)
+    StringBuilder builder = new StringBuilder().append("spark-shell --jars ").append(HUDI_SPARK_BUNDLE)
         .append(" --master local[2] --driver-class-path ").append(HADOOP_CONF_DIR)
         .append(
             " --conf spark.sql.hive.convertMetastoreParquet=false --deploy-mode client  --driver-memory 1G --executor-memory 1G --num-executors 1 ")
-        .append(" --packages org.apache.spark:spark-avro_2.11:2.4.4 ").append(" -i ").append(commandFile).toString();
+        .append(" --packages org.apache.spark:spark-avro_2.11:2.4.4 ").append(" -i ").append(commandFile);
+    System.out.println("Spark shell command :: " + builder.toString());
+    return builder.toString();
   }
 
   static String getPrestoConsoleCommand(String commandFile) {
@@ -127,7 +131,7 @@ public abstract class ITTestBase {
     builder.append(" --server " + PRESTO_COORDINATOR_URL)
         .append(" --catalog hive --schema default")
         .append(" -f " + commandFile);
-    System.out.println("Presto comamnd " + builder.toString());
+    System.out.println("Presto command :: " + builder.toString());
     return builder.toString();
   }
 
