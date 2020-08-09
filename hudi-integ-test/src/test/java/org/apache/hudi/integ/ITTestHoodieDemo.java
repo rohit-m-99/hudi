@@ -115,6 +115,7 @@ public class ITTestHoodieDemo extends ITTestBase {
   }
 
   private void setupDemo() throws Exception {
+    Thread.sleep(90 * 1000);
     List<String> cmds = CollectionUtils.createImmutableList("hdfs dfsadmin -safemode wait",
         "hdfs dfs -mkdir -p " + HDFS_DATA_DIR,
         "hdfs dfs -copyFromLocal -f " + INPUT_BATCH_PATH1 + " " + HDFS_BATCH_PATH1,

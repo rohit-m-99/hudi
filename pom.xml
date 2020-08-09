@@ -1016,6 +1016,9 @@
               <skip>${skipUTs}</skip>
               <forkedProcessExitTimeoutInSeconds>120</forkedProcessExitTimeoutInSeconds>
               <excludedGroups>functional</excludedGroups>
+               <includes>
+                <include>**/*TestHoodieIndex.java</include>
+              </includes>
               <excludes>
                 <exclude>**/*FunctionalTestSuite.java</exclude>
                 <exclude>**/IT*.java</exclude>
@@ -1071,7 +1074,7 @@
               <forkCount>1</forkCount>
               <reuseForks>true</reuseForks>
               <includes>
-                <include>**/*FunctionalTestSuite.java</include>
+                <include>**/CommonFunctionalTestSuite.java</include>
               </includes>
             </configuration>
           </plugin>
