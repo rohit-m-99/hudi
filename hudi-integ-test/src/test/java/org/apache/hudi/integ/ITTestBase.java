@@ -176,7 +176,7 @@ public abstract class ITTestBase {
       callback.getStdout().flush();
       LOG.error("\n\n ###### Timed Out Command : " +  Arrays.asList(command));
       LOG.error("\n\n ###### Stderr of timed-out command #######\n" + callback.getStderr().toString());
-      LOG.error("\n\n ###### stdout of timed-out command #######\n" + callback.getStderr().toString());
+      LOG.error("\n\n ###### stdout of timed-out command #######\n" + callback.getStdout().toString());
       throw new TimeoutException("Command " + command +  " has been running for more than 15 minutes. "
         + "Killing and failing !!");
     }

@@ -1125,7 +1125,7 @@
               <skip>${skipITs}</skip>
               <includes>
                 <include>**/testsuite/**/Test*.java</include>
-                <include>**/ITTestHoodieDemo.java</include>
+                <include>**/IT*.java</include>
               </includes>
             </configuration>
             <executions>
