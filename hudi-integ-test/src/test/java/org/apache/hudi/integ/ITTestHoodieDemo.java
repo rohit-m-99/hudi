@@ -407,6 +407,7 @@ public class ITTestHoodieDemo extends ITTestBase {
   }
 
   private void scheduleAndRunCompaction() throws Exception {
+    System.out.println("Schedule and run compaction command :: ");
     executeCommandStringInDocker(ADHOC_1_CONTAINER, HUDI_CLI_TOOL + " --cmdfile " + COMPACTION_COMMANDS, true);
   }
 }
