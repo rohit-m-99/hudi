@@ -1124,7 +1124,7 @@
             <configuration combine.self="override">
               <skip>${skipITs}</skip>
               <includes>
-                <include>**/IT*.java</include>
+                <include>**/testsuite/**/Test*.java</include>
               </includes>
             </configuration>
             <executions>
