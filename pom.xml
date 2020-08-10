@@ -993,7 +993,7 @@
         </surefire-log4j.file>
       </properties>
     </profile>
-    <profile>
+    <!--profile>
       <id>unit-tests</id>
       <properties>
         <skipUTs>false</skipUTs>
@@ -1101,7 +1101,7 @@
           </plugin>
         </plugins>
       </build>
-    </profile>
+    </profile-->
     <profile>
       <id>integration-tests</id>
       <properties>
