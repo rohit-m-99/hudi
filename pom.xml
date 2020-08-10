@@ -1017,7 +1017,7 @@
               <forkedProcessExitTimeoutInSeconds>120</forkedProcessExitTimeoutInSeconds>
               <excludedGroups>functional</excludedGroups>
                <includes>
-                <include>**/*TestHoodieIndex.java</include>
+                <include>**/*TestAbcHoodieIndex.java</include>
               </includes>
               <excludes>
                 <exclude>**/*FunctionalTestSuite.java</exclude>
