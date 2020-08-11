@@ -117,7 +117,7 @@ private[hudi] object HoodieSparkSqlWriter {
       if (operation.equalsIgnoreCase(BULK_INSERT_DATASET_OPERATION_OPT_VAL)) {
         val (success, commitTime: common.util.Option[String]) = bulkInsertAsRow(sqlContext, parameters, df, tblName,
                                                                                 basePath, path, instantTime)
-        return (success, commitTime, common.util.Option.of(""), hoodieWriteClient.orNull, tableConfig)
+        return (success, commitTime, common.util.Option.empty(), hoodieWriteClient.orNull, tableConfig)
       }
       // scalastyle:on
 

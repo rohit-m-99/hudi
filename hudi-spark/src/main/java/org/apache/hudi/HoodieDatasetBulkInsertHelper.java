@@ -76,9 +76,9 @@ public class HoodieDatasetBulkInsertHelper {
 
     keyGenerator.initializeRowKeyGenerator(structTypeForUDF, structName, recordNamespace);
 
-    sqlContext.udf().register(RECORD_KEY_UDF_FN, (UDF1<Row, String>) keyGenerator::getRecordKeyFromRow, DataTypes.StringType);
+    sqlContext.udf().register(RECORD_KEY_UDF_FN, (UDF1<Row, String>) keyGenerator::getRecordKey, DataTypes.StringType);
 
-    sqlContext.udf().register(PARTITION_PATH_UDF_FN, (UDF1<Row, String>) keyGenerator::getPartitionPathFromRow, DataTypes.StringType);
+    sqlContext.udf().register(PARTITION_PATH_UDF_FN, (UDF1<Row, String>) keyGenerator::getPartitionPath, DataTypes.StringType);
 
     final Dataset<Row> rowDatasetWithRecordKeys = rows.withColumn(HoodieRecord.RECORD_KEY_METADATA_FIELD,
         callUDF(RECORD_KEY_UDF_FN, org.apache.spark.sql.functions.struct(
