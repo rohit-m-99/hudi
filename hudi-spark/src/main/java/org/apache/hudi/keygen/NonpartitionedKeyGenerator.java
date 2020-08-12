@@ -49,11 +49,13 @@ public class NonpartitionedKeyGenerator extends SimpleKeyGenerator {
 
   @Override
   public String getRecordKey(Row row) {
+    preConditionCheckForRowInit();
     return super.getRecordKey(row);
   }
 
   @Override
   public String getPartitionPath(Row row) {
+    preConditionCheckForRowInit();
     return EMPTY_PARTITION;
   }
 }

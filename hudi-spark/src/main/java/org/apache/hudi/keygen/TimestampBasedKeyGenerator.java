@@ -194,11 +194,13 @@ public class TimestampBasedKeyGenerator extends SimpleKeyGenerator {
 
   @Override
   public String getRecordKey(Row row) {
+    preConditionCheckForRowInit();
     return RowKeyGeneratorHelper.getRecordKeyFromRow(row, getRecordKeyFields(), getRecordKeyPositions(), false);
   }
 
   @Override
   public String getPartitionPath(Row row) {
+    preConditionCheckForRowInit();
     Object fieldVal = null;
     Object partitionPathFieldVal =  RowKeyGeneratorHelper.getNestedFieldVal(row, getPartitionPathPositions().get(getPartitionPathFields().get(0)));
     try {
@@ -209,7 +211,7 @@ public class TimestampBasedKeyGenerator extends SimpleKeyGenerator {
         fieldVal = partitionPathFieldVal;
       }
       return getPartitionPath(fieldVal);
-    } catch (ParseException e) {
+    } catch (Exception e) {
       throw new HoodieDeltaStreamerException("Unable to parse input partition field :" + fieldVal, e);
     }
   }

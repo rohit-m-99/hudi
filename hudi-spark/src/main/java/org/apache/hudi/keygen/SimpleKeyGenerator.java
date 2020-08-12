@@ -61,11 +61,13 @@ public class SimpleKeyGenerator extends BuiltinKeyGenerator {
 
   @Override
   public String getRecordKey(Row row) {
+    preConditionCheckForRowInit();
     return RowKeyGeneratorHelper.getRecordKeyFromRow(row, getRecordKeyFields(), getRecordKeyPositions(), false);
   }
 
   @Override
   public String getPartitionPath(Row row) {
+    preConditionCheckForRowInit();
     return RowKeyGeneratorHelper.getPartitionPathFromRow(row, getPartitionPathFields(),
         hiveStylePartitioning, getPartitionPathPositions());
   }

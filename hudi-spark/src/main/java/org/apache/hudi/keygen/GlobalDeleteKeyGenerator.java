@@ -27,6 +27,7 @@ import org.apache.spark.sql.Row;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Key generator for deletes using global indices. Global index deletes do not require partition value so this key generator avoids using partition value for generating HoodieKey.
@@ -37,7 +38,7 @@ public class GlobalDeleteKeyGenerator extends BuiltinKeyGenerator {
 
   public GlobalDeleteKeyGenerator(TypedProperties config) {
     super(config);
-    this.recordKeyFields = Arrays.asList(config.getString(DataSourceWriteOptions.RECORDKEY_FIELD_OPT_KEY()).split(","));
+    this.recordKeyFields = Arrays.stream(config.getString(DataSourceWriteOptions.RECORDKEY_FIELD_OPT_KEY()).split(",")).map(String::trim).collect(Collectors.toList());
   }
 
   @Override
@@ -57,11 +58,13 @@ public class GlobalDeleteKeyGenerator extends BuiltinKeyGenerator {
 
   @Override
   public String getRecordKey(Row row) {
+    preConditionCheckForRowInit();
     return RowKeyGeneratorHelper.getRecordKeyFromRow(row, getRecordKeyFields(), getRecordKeyPositions(), true);
   }
 
   @Override
   public String getPartitionPath(Row row) {
+    preConditionCheckForRowInit();
     return EMPTY_PARTITION;
   }
 }

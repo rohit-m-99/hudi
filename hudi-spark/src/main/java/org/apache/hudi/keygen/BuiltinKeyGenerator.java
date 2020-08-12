@@ -36,8 +36,7 @@ import java.util.stream.Collectors;
 import scala.Function1;
 
 /**
- * Base class for all the built-in key generators. Contains methods structured for
- * code reuse amongst them.
+ * Base class for all the built-in key generators. Contains methods structured for code reuse amongst them.
  */
 public abstract class BuiltinKeyGenerator extends KeyGenerator {
 
@@ -51,6 +50,7 @@ public abstract class BuiltinKeyGenerator extends KeyGenerator {
   protected StructType structType;
   private String structName;
   private String recordNamespace;
+  private boolean rowInitCalled = false;
 
   protected BuiltinKeyGenerator(TypedProperties config) {
     super(config);
@@ -87,19 +87,35 @@ public abstract class BuiltinKeyGenerator extends KeyGenerator {
 
   @Override
   public void initializeRowKeyGenerator(StructType structType, String structName, String recordNamespace) {
-    // parse simple feilds
+    // parse simple fields
     getRecordKeyFields().stream()
         .filter(f -> !(f.contains(".")))
-        .forEach(f -> recordKeyPositions.put(f, Collections.singletonList((Integer) (structType.getFieldIndex(f).get()))));
+        .forEach(f ->
+        {
+          if (structType.getFieldIndex(f).isDefined()) {
+            recordKeyPositions.put(f, Collections.singletonList((Integer) (structType.getFieldIndex(f).get())));
+          } else {
+            throw new HoodieKeyException("recordKey value not found for field: \"" + f + "\"");
+          }
+        });
+
     // parse nested fields
     getRecordKeyFields().stream()
         .filter(f -> f.contains("."))
         .forEach(f -> recordKeyPositions.put(f, RowKeyGeneratorHelper.getNestedFieldIndices(structType, f, true)));
+
     // parse simple fields
     if (getPartitionPathFields() != null) {
       getPartitionPathFields().stream().filter(f -> !f.isEmpty()).filter(f -> !(f.contains(".")))
-          .forEach(f -> partitionPathPositions.put(f,
-              Collections.singletonList((Integer) (structType.getFieldIndex(f).get()))));
+          .forEach(f -> {
+            if (structType.getFieldIndex(f).isDefined()) {
+              partitionPathPositions.put(f,
+                  Collections.singletonList((Integer) (structType.getFieldIndex(f).get())));
+            } else {
+              partitionPathPositions.put(f, Collections.singletonList(-1));
+            }
+          });
+
       // parse nested fields
       getPartitionPathFields().stream().filter(f -> !f.isEmpty()).filter(f -> f.contains("."))
           .forEach(f -> partitionPathPositions.put(f,
@@ -108,16 +124,19 @@ public abstract class BuiltinKeyGenerator extends KeyGenerator {
     this.structName = structName;
     this.structType = structType;
     this.recordNamespace = recordNamespace;
+    this.rowInitCalled = true;
   }
 
   /**
    * Fetch record key from {@link Row}.
+   *
    * @param row instance of {@link Row} from which record key is requested.
    * @return the record key of interest from {@link Row}.
    */
   @Override
   public String getRecordKey(Row row) {
-    if (null != converterFn) {
+    preConditionCheckForRowInit();
+    if (null == converterFn) {
       converterFn = AvroConversionHelper.createConverterToAvro(structType, structName, recordNamespace);
     }
     GenericRecord genericRecord = (GenericRecord) converterFn.apply(row);
@@ -126,12 +145,14 @@ public abstract class BuiltinKeyGenerator extends KeyGenerator {
 
   /**
    * Fetch partition path from {@link Row}.
+   *
    * @param row instance of {@link Row} from which partition path is requested
    * @return the partition path of interest from {@link Row}.
    */
   @Override
   public String getPartitionPath(Row row) {
-    if (null != converterFn) {
+    preConditionCheckForRowInit();
+    if (null == converterFn) {
       converterFn = AvroConversionHelper.createConverterToAvro(structType, structName, recordNamespace);
     }
     GenericRecord genericRecord = (GenericRecord) converterFn.apply(row);
@@ -152,5 +173,15 @@ public abstract class BuiltinKeyGenerator extends KeyGenerator {
 
   protected Map<String, List<Integer>> getPartitionPathPositions() {
     return partitionPathPositions;
+  }
+
+  protected boolean isRowInitCalled(){
+    return rowInitCalled;
+  }
+
+  protected void preConditionCheckForRowInit(){
+    if(!isRowInitCalled()){
+      throw new IllegalStateException("KeyGenerator#initializeRowKeyGenerator should have been invoked before this method ");
+    }
   }
 }

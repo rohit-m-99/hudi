@@ -60,11 +60,13 @@ public class ComplexKeyGenerator extends BuiltinKeyGenerator {
 
   @Override
   public String getRecordKey(Row row) {
+    preConditionCheckForRowInit();
     return RowKeyGeneratorHelper.getRecordKeyFromRow(row, getRecordKeyFields(), getRecordKeyPositions(), true);
   }
 
   @Override
   public String getPartitionPath(Row row) {
+    preConditionCheckForRowInit();
     return RowKeyGeneratorHelper.getPartitionPathFromRow(row, getPartitionPathFields(),
         hiveStylePartitioning, getPartitionPathPositions());
   }
