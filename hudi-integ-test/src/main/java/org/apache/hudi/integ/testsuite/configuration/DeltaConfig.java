@@ -94,6 +94,9 @@ public class DeltaConfig implements Serializable {
     private static String VALIDATE_CLEAN = "validate_clean";
     private static String SCHEMA_VERSION = "schema_version";
     private static String NUM_ROLLBACKS = "num_rollbacks";
+    private static String READ_PARTIAL_DATA = "read_partial_data";
+    private static String READ_PERCENTAGE = "read_percentage";
+    private static String MIN_FARE_VALUE_TO_READ = "min_fare_value_to_read";
 
     private Map<String, Object> configsMap;
 
@@ -103,6 +106,18 @@ public class DeltaConfig implements Serializable {
 
     public static Builder newBuilder() {
       return new Builder();
+    }
+
+    public boolean readPartialData() {
+      return Boolean.valueOf(configsMap.getOrDefault(READ_PARTIAL_DATA, false).toString());
+    }
+
+    public int getReadPercentage() {
+      return Integer.valueOf(configsMap.getOrDefault(READ_PERCENTAGE, 100).toString());
+    }
+
+    public long getMinFareValueToRead() {
+      return Long.valueOf(configsMap.getOrDefault(MIN_FARE_VALUE_TO_READ, 10).toString());
     }
 
     public long getNumRecordsInsert() {

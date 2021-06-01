@@ -22,6 +22,7 @@ import org.apache.hudi.client.WriteStatus;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.integ.testsuite.HoodieTestSuiteWriter;
 import org.apache.hudi.integ.testsuite.configuration.DeltaConfig.Config;
+import org.apache.hudi.integ.testsuite.dag.ExecutionContext;
 import org.apache.hudi.integ.testsuite.generator.DeltaGenerator;
 import org.apache.spark.api.java.JavaRDD;
 
@@ -37,17 +38,27 @@ public class UpsertNode extends InsertNode {
   @Override
   protected void generate(DeltaGenerator deltaGenerator) throws Exception {
     if (!config.isDisableGenerate()) {
-      log.info("Generating input data {}", this.getName());
       deltaGenerator.writeRecords(deltaGenerator.generateUpdates(config)).count();
+    }
+  }
+
+  @Override
+  public void execute(ExecutionContext executionContext, int curItrCount) throws Exception {
+    if (config.getIterationCountToExecute() == curItrCount) {
+      log.warn("Executing UPSERT NODE ::::: ");
+      super.execute(executionContext, curItrCount);
     }
   }
 
   @Override
   protected JavaRDD<WriteStatus> ingest(HoodieTestSuiteWriter hoodieTestSuiteWriter, Option<String> commitTime)
       throws Exception {
+    long startTimeMs = System.currentTimeMillis();
+    log.info("Generating input data {}", this.getName());
     if (!config.isDisableIngest()) {
       log.info("Upserting input data {}", this.getName());
       this.result = hoodieTestSuiteWriter.upsert(commitTime);
+      log.warn("Time taken to ingest for UpsertNode : " + (System.currentTimeMillis() - startTimeMs));
     }
     return this.result;
   }
