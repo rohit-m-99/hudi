@@ -29,12 +29,24 @@ import java.util.Objects;
  */
 public class HoodieKey implements Serializable {
 
-  private final String recordKey;
+  private String recordKey;
 
-  private final String partitionPath;
+  private String partitionPath;
 
   public HoodieKey(String recordKey, String partitionPath) {
     this.recordKey = recordKey;
+    this.partitionPath = partitionPath;
+  }
+
+  public HoodieKey() {
+
+  }
+
+  public void setRecordKey(String recordKey) {
+    this.recordKey = recordKey;
+  }
+
+  public void setPartitionPath(String partitionPath) {
     this.partitionPath = partitionPath;
   }
 
