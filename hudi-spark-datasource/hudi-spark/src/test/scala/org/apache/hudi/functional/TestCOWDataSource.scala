@@ -53,7 +53,7 @@ class TestCOWDataSource extends HoodieClientTestBase {
   val commonOpts = Map(
     "hoodie.insert.shuffle.parallelism" -> "4",
     "hoodie.upsert.shuffle.parallelism" -> "4",
-    "hoodie.bulkinsert.shuffle.parallelism" -> "2",
+    "hoodie.bulkinsert.shuffle.parallelism" -> "100",
     "hoodie.delete.shuffle.parallelism" -> "1",
     DataSourceWriteOptions.RECORDKEY_FIELD_OPT_KEY -> "_row_key",
     DataSourceWriteOptions.PARTITIONPATH_FIELD_OPT_KEY -> "partition",
@@ -129,6 +129,21 @@ class TestCOWDataSource extends HoodieClientTestBase {
   }
 
   @Test
+  def testBulkInsert(): Unit = {
+    var structType: StructType = null
+    val records = recordsToStrings(dataGen.generateInserts("%05d".format(0), 10000000)).toList
+    val inputDF = spark.read.json(spark.sparkContext.parallelize(records, 1000))
+    structType = inputDF.schema
+    inputDF.write.format("hudi")
+      .options(commonOpts)
+      .option(DataSourceWriteOptions.OPERATION_OPT_KEY, DataSourceWriteOptions.BULK_INSERT_OPERATION_OPT_VAL)
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
+    println("Going to sleep")
+    Thread.sleep(1000*60*10)
+  }
+
+  @Test
   def testCopyOnWriteDeletes(): Unit = {
     // Insert Operation
     val records1 = recordsToStrings(dataGen.generateInserts("000", 100)).toList
@@ -158,8 +173,76 @@ class TestCOWDataSource extends HoodieClientTestBase {
     assertEquals(snapshotDF1.count() - inputDF2.count(), snapshotDF2.count())
   }
 
+  @Test
+  def testCopyOnWriteDeletesWithAutoCommitDisabled(): Unit = {
+    // Insert Operation
+    val records1 = recordsToStrings(dataGen.generateInserts("000", 100)).toList
+    val inputDF1 = spark.read.json(spark.sparkContext.parallelize(records1, 2))
+    inputDF1.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
 
-  @ParameterizedTest
+    assertTrue(HoodieDataSourceHelpers.hasNewCommits(fs, basePath, "000"))
+
+    val snapshotDF1 = spark.read.format("org.apache.hudi")
+      .load(basePath + "/*/*/*/*")
+    assertEquals(100, snapshotDF1.count())
+
+    val records2 = deleteRecordsToStrings(dataGen.generateUniqueDeletes(20)).toList
+    val inputDF2 = spark.read.json(spark.sparkContext.parallelize(records2 , 2))
+
+    inputDF2.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .option(DataSourceWriteOptions.OPERATION_OPT_KEY, DataSourceWriteOptions.DELETE_OPERATION_OPT_VAL)
+      .option(HoodieWriteConfig.HOODIE_AUTO_COMMIT_PROP, "false")
+      .mode(SaveMode.Append)
+      .save(basePath)
+
+    val snapshotDF2 = spark.read.format("org.apache.hudi")
+      .load(basePath + "/*/*/*/*")
+    assertEquals(snapshotDF1.count(), snapshotDF2.count())
+  }
+
+
+  @Test
+  def testCopyOnWriteStorageAutoCommitDisabled() {
+    // Insert Operation
+    val records1 = recordsToStrings(dataGen.generateInserts("000", 100)).toList
+    val inputDF1 = spark.read.json(spark.sparkContext.parallelize(records1, 2))
+    inputDF1.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .option(DataSourceWriteOptions.OPERATION_OPT_KEY, DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL)
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
+
+    assertTrue(HoodieDataSourceHelpers.hasNewCommits(fs, basePath, "000"))
+    val commitInstantTime1 = HoodieDataSourceHelpers.latestCommit(fs, basePath)
+
+    // Snapshot query
+    val snapshotDF1 = spark.read.format("org.apache.hudi")
+      .load(basePath + "/*/*/*/*")
+    assertEquals(100, snapshotDF1.count())
+
+    // Upsert based on the written table with Hudi metadata columns
+    val verificationRowKey = snapshotDF1.limit(1).select("_row_key").first.getString(0)
+    val updateDf = snapshotDF1.filter(col("_row_key") === verificationRowKey).withColumn(verificationCol, lit(updatedVerificationVal))
+
+    updateDf.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .option(HoodieWriteConfig.HOODIE_AUTO_COMMIT_PROP, "false")
+      .mode(SaveMode.Append)
+      .save(basePath)
+    val commitInstantTime2 = HoodieDataSourceHelpers.latestCommit(fs, basePath)
+
+    val snapshotDF2 = spark.read.format("hudi").load(basePath + "/*/*/*/*")
+    val snapShot2List = snapshotDF2.collect()
+    assertEquals(100, snapshotDF2.count())
+    assertEquals(verificationCol, snapshotDF2.filter(col("_row_key") === verificationRowKey).select(verificationCol).first.getString(0))
+  }
+
+
+    @ParameterizedTest
   //TODO(metadata): Needs HUDI-1459 to be fixed
   //@ValueSource(booleans = Array(true, false))
   @ValueSource(booleans = Array(false))

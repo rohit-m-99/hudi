@@ -147,6 +147,11 @@ private[hudi] object HoodieSparkSqlWriter {
           val schema = AvroConversionUtils.convertStructTypeToAvroSchema(df.schema, structName, nameSpace)
           sparkContext.getConf.registerAvroSchemas(schema)
           log.info(s"Registered avro schema : ${schema.toString(true)}")
+          if (parameters.contains(HoodieWriteConfig.HOODIE_AUTO_COMMIT_PROP)) {
+            println("Auto commit prop " + parameters(HoodieWriteConfig.HOODIE_AUTO_COMMIT_PROP))
+          } else {
+            println("Auto commit prop not found")
+          }
 
           // Convert to RDD[HoodieRecord]
           val genericRecords: RDD[GenericRecord] = HoodieSparkUtils.createRdd(df, schema, structName, nameSpace)
@@ -166,7 +171,7 @@ private[hudi] object HoodieSparkSqlWriter {
 
           // Create a HoodieWriteClient & issue the write.
           val client = hoodieWriteClient.getOrElse(DataSourceUtils.createHoodieClient(jsc, schema.toString, path.get,
-            tblName, mapAsJavaMap(parameters - HoodieWriteConfig.HOODIE_AUTO_COMMIT_PROP)
+            tblName, mapAsJavaMap(parameters)
           )).asInstanceOf[SparkRDDWriteClient[HoodieRecordPayload[Nothing]]]
 
           if (isAsyncCompactionEnabled(client, tableConfig, parameters, jsc.hadoopConfiguration())) {

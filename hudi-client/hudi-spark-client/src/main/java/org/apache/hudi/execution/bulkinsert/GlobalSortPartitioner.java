@@ -37,6 +37,7 @@ public class GlobalSortPartitioner<T extends HoodieRecordPayload>
   @Override
   public JavaRDD<HoodieRecord<T>> repartitionRecords(JavaRDD<HoodieRecord<T>> records,
                                                      int outputSparkPartitions) {
+    System.out.println("Sorting records. Global Sort");
     // Now, sort the records and line them up nicely for loading.
     return records.sortBy(record -> {
       // Let's use "partitionPath + key" as the sort key. Spark, will ensure

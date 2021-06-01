@@ -140,7 +140,7 @@ public class HoodieClientTestBase extends HoodieClientTestHarness {
   public HoodieWriteConfig.Builder getConfigBuilder(String schemaStr, IndexType indexType,
                                                     HoodieFailedWritesCleaningPolicy cleaningPolicy) {
     return HoodieWriteConfig.newBuilder().withPath(basePath).withSchema(schemaStr)
-        .withParallelism(2, 2).withBulkInsertParallelism(2).withFinalizeWriteParallelism(2).withDeleteParallelism(2)
+        .withParallelism(100, 100).withBulkInsertParallelism(100).withFinalizeWriteParallelism(100).withDeleteParallelism(2)
         .withTimelineLayoutVersion(TimelineLayoutVersion.CURR_VERSION)
         .withWriteStatusClass(MetadataMergeWriteStatus.class)
         .withConsistencyGuardConfig(ConsistencyGuardConfig.newBuilder().withConsistencyCheckEnabled(true).build())
@@ -453,7 +453,22 @@ public class HoodieClientTestBase extends HoodieClientTestHarness {
 
     if (doCommit) {
       client.commit(newCommitTime, result);
-    }
+    } /*else {
+      HoodieTableMetaClient metaClient = HoodieTableMetaClient.builder().setConf(hadoopConf).setBasePath(basePath).build();
+      HoodieTimeline timeline = new HoodieActiveTimeline(metaClient).getCommitTimeline();
+      // Check the entire dataset has all records still
+      String[] fullPartitionPaths = new String[dataGen.getPartitionPaths().length];
+      for (int i = 0; i < fullPartitionPaths.length; i++) {
+        fullPartitionPaths[i] = String.format("%s/%s/*", basePath, dataGen.getPartitionPaths()[i]);
+      }
+      assertEquals(expTotalRecords, HoodieClientTestUtils.read(jsc, basePath, sqlContext, fs, fullPartitionPaths).count(),
+          "Must contain " + expTotalRecords + " records");
+
+      HoodieTimeline committedTimeline = timeline.findInstantsAfter(initCommitTime, Integer.MAX_VALUE);
+      assertEquals(expTotalCommits, timeline.findInstantsAfter(initCommitTime, Integer.MAX_VALUE).countInstants(),
+          "Expecting " + expTotalCommits + " commits.");
+
+    }*/
     // check the partition metadata is written out
     assertPartitionMetadataForRecords(records, fs);
 

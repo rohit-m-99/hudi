@@ -15,7 +15,7 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "Copying spark default config and setting up configs"
+echo "Copying spark default config and setting up configs 222"
 cp /var/hoodie/ws/docker/demo/config/spark-defaults.conf $SPARK_CONF_DIR/.
 cp /var/hoodie/ws/docker/demo/config/log4j.properties $SPARK_CONF_DIR/.
 hadoop fs -mkdir -p /var/demo/
