@@ -50,7 +50,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload, I, K, O, R>
+public abstract class BaseCommitActionExecutor<T, I, K, O, R>
     extends BaseActionExecutor<T, I, K, O, R> {
 
   private static final Logger LOG = LogManager.getLogger(BaseCommitActionExecutor.class);
@@ -152,8 +152,9 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload, I,
   }
 
   protected abstract Iterator<List<WriteStatus>> handleInsert(String idPfx,
-      Iterator<HoodieRecord<T>> recordItr) throws Exception;
+      Iterator<T> recordItr) throws Exception;
 
   protected abstract Iterator<List<WriteStatus>> handleUpdate(String partitionPath, String fileId,
-      Iterator<HoodieRecord<T>> recordItr) throws IOException;
+      Iterator<T> recordItr) throws IOException;
+
 }

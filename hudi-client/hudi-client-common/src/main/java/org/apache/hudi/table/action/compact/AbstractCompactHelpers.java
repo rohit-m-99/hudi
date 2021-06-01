@@ -38,7 +38,7 @@ import java.nio.charset.StandardCharsets;
  * @param <K> Type of keys
  * @param <O> Type of outputs
  */
-public abstract class AbstractCompactHelpers<T extends HoodieRecordPayload, I, K, O> {
+public abstract class AbstractCompactHelpers<T, I, K, O> {
   public abstract HoodieCommitMetadata createCompactionMetadata(HoodieTable<T, I, K, O> table,
                                                                 String compactionInstantTime,
                                                                 O writeStatuses,

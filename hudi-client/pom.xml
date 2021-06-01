@@ -35,5 +35,6 @@
     <module>hudi-java-client</module>
     <module>hudi-spark-client</module>
     <module>hudi-flink-client</module>
+    <module>hudi-spark-r-client</module>
   </modules>
 </project>

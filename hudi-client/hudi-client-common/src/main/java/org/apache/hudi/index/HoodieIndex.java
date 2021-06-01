@@ -40,7 +40,7 @@ import java.io.Serializable;
  * @param <O> Type of outputs
  */
 @PublicAPIClass(maturity = ApiMaturityLevel.EVOLVING)
-public abstract class HoodieIndex<T extends HoodieRecordPayload, I, K, O> implements Serializable {
+public abstract class HoodieIndex<T, I, K, O> implements Serializable {
 
   protected final HoodieWriteConfig config;
 
