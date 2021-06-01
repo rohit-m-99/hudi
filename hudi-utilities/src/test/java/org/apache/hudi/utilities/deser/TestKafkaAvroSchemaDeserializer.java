@@ -24,6 +24,7 @@ import org.apache.hudi.utilities.testutils.UtilitiesTestBase;
 
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.Schema;
@@ -121,7 +122,7 @@ public class TestKafkaAvroSchemaDeserializer extends UtilitiesTestBase {
     assertEquals(avroRecordWithAllFieldActual.getSchema(), evolSchema);
 
     // read old record w/ evolved schema.
-    IndexedRecord actualRec = (IndexedRecord) avroDeserializer.deserialize(false, topic, false, bytesOrigRecord, origSchema);
+    IndexedRecord actualRec = (IndexedRecord) avroDeserializer.deserialize(false, topic, false, bytesOrigRecord, evolSchema);
     // record won't be equal to original record as we read w/ evolved schema. "age" will be added w/ default value of null
     assertNotEquals(avroRecord, actualRec);
     GenericRecord genericRecord = (GenericRecord) actualRec;
@@ -130,6 +131,19 @@ public class TestKafkaAvroSchemaDeserializer extends UtilitiesTestBase {
     assertEquals(actualRec.getSchema(), evolSchema);
     assertNull(genericRecord.get("age"));
   }
+
+  class TestKafkaAvroDeser extends KafkaAvroDeserializer {
+
+    TestKafkaAvroDeser(SchemaRegistryClient client, Map<String, ?> props) {
+      super(client, props);
+    }
+
+    public Object deser(boolean includeSchemaAndVersion, String topic, Boolean isKey, byte[] payload, Schema readerSchema) {
+      return super.deserialize(includeSchemaAndVersion, topic, isKey, payload, readerSchema);
+    }
+
+  }
+
 
   protected TypedProperties getConvertToTypedProperties(Map<String, ?> configs) {
     TypedProperties typedProperties = new TypedProperties();

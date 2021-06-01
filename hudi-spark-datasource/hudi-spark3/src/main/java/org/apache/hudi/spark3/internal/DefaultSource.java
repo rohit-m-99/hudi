@@ -49,7 +49,9 @@ public class DefaultSource extends BaseDefaultSource implements TableProvider {
     String tblName = properties.get(HoodieWriteConfig.TABLE_NAME);
     // 1st arg to createHooodieConfig is not really reuqired to be set. but passing it anyways.
     HoodieWriteConfig config = DataSourceUtils.createHoodieConfig(properties.get(HoodieWriteConfig.AVRO_SCHEMA), path, tblName, properties);
-    return new HoodieDataSourceInternalTable(instantTime, config, schema, getSparkSession(),
+    Table toReturn = HoodieDataSourceInternalTable(instantTime, config, schema, getSparkSession(),
         getConfiguration());
+
+    return toReturn;
   }
 }
