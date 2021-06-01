@@ -56,7 +56,7 @@ public class TestHiveSyncTool {
   }
 
   private static Iterable<Object[]> useJdbcAndSchemaFromCommitMetadata() {
-    return Arrays.asList(new Object[][] {{true, true}, {true, false}, {false, true}, {false, false}});
+    return Arrays.asList(new Object[][] {{false, true}});
   }
 
   @BeforeEach

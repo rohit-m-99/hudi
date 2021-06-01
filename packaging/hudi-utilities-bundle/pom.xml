@@ -89,8 +89,9 @@
                   <include>org.apache.httpcomponents:httpcore</include>
                   <include>org.apache.httpcomponents:fluent-hc</include>
                   <include>org.antlr:stringtemplate</include>
+                  <include>org.antlr:antlr-runtime</include>
                   <include>org.apache.parquet:parquet-avro</include>
-
+                  <include>org.json:json</include>
                   <include>com.twitter:bijection-avro_${scala.binary.version}</include>
                   <include>com.twitter:bijection-core_${scala.binary.version}</include>
                   <include>io.confluent:kafka-avro-serializer</include>
@@ -169,6 +170,10 @@
                 <relocation>
                   <pattern>org.apache.commons.codec.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.commons.codec.</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.json.</pattern>
+                  <shadedPattern>${utilities.bundle.hive.shade.prefix}org.json.</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.eclipse.jetty.</pattern>
@@ -296,6 +301,13 @@
       <groupId>${hive.groupid}</groupId>
       <artifactId>hive-common</artifactId>
       <version>${hive.version}</version>
+      <scope>${utilities.bundle.hive.scope}</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20180813</version>
       <scope>${utilities.bundle.hive.scope}</scope>
     </dependency>
 

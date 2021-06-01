@@ -88,6 +88,7 @@ public class HoodieHiveClient extends AbstractSyncHoodieClient {
       createHiveConnection();
     }
     try {
+      LOG.warn("Hive metastore config :: " + configuration.getAllProperties());
       this.client = Hive.get(configuration).getMSC();
     } catch (MetaException | HiveException e) {
       throw new HoodieHiveSyncException("Failed to create HiveMetaStoreClient", e);

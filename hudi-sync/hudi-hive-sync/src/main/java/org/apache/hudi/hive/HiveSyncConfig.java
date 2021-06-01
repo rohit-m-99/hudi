@@ -105,6 +105,7 @@ public class HiveSyncConfig implements Serializable {
     newConfig.partitionFields = cfg.partitionFields;
     newConfig.partitionValueExtractorClass = cfg.partitionValueExtractorClass;
     newConfig.jdbcUrl = cfg.jdbcUrl;
+    newConfig.useJdbc = cfg.useJdbc;
     newConfig.tableName = cfg.tableName;
     newConfig.usePreApacheInputFormat = cfg.usePreApacheInputFormat;
     newConfig.useFileListingFromMetadata = cfg.useFileListingFromMetadata;

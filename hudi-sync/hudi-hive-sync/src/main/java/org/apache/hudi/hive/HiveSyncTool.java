@@ -65,6 +65,7 @@ public class HiveSyncTool extends AbstractSyncTool {
     super(configuration.getAllProperties(), fs);
     this.hoodieHiveClient = new HoodieHiveClient(cfg, configuration, fs);
     this.cfg = cfg;
+    LOG.warn("Hive config useJdbc :: " + cfg.useJdbc);
     // Set partitionFields to empty, when the NonPartitionedExtractor is used
     if (NonPartitionedExtractor.class.getName().equals(cfg.partitionValueExtractorClass)) {
       LOG.warn("Set partitionFields to empty, since the NonPartitionedExtractor is used");
@@ -225,7 +226,10 @@ public class HiveSyncTool extends AbstractSyncTool {
       cmd.usage();
       System.exit(1);
     }
-    FileSystem fs = FSUtils.getFs(cfg.basePath, new Configuration());
+
+    Configuration config = new Configuration();
+    // config.set("hive.metastore.uris", "thrift://localhost:9083");
+    FileSystem fs = FSUtils.getFs(cfg.basePath, config);
     HiveConf hiveConf = new HiveConf();
     hiveConf.addResource(fs.getConf());
     new HiveSyncTool(cfg, hiveConf, fs).syncHoodieTable();
