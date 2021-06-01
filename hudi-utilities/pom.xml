@@ -152,6 +152,19 @@
       <version>${kafka.version}</version>
     </dependency>
 
+    <!-- Pulsar -->
+    <dependency>
+      <groupId>org.apache.pulsar</groupId>
+      <artifactId>pulsar-client</artifactId>
+      <version>${pulsar.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.pulsar</groupId>
+      <artifactId>pulsar-client-api</artifactId>
+      <version>${pulsar.version}</version>
+    </dependency>
+
     <!-- Logging -->
     <dependency>
       <groupId>log4j</groupId>
@@ -413,6 +426,26 @@
       <version>${hive.version}</version>
       <scope>test</scope>
       <classifier>${hive.exec.classifier}</classifier>
+    </dependency>
+
+    <!-- Pulsar - Test-->
+    <dependency>
+      <groupId>org.apache.pulsar</groupId>
+      <artifactId>pulsar-client</artifactId>
+      <version>${pulsar.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!--dependency>
+      <groupId>org.apache.pulsar</groupId>
+      <artifactId>pulsar-client-api</artifactId>
+      <version>${pulsar.version}</version>
+      <scope>test</scope>
+    </dependency-->
+    <dependency>
+      <groupId>org.apache.pulsar</groupId>
+      <artifactId>pulsar-broker</artifactId>
+      <version>${pulsar.version}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
