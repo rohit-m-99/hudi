@@ -37,6 +37,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
 import java.io.IOException;
@@ -47,7 +48,7 @@ import static org.apache.hudi.common.testutils.RawTripTestPayload.recordsToStrin
 
 public class HoodieJavaGenerateApp {
   @Parameter(names = {"--table-path", "-p"}, description = "Path for Hoodie sample table")
-  private String tablePath = "file:///tmp/hoodie/sample-table";
+  private String tablePath = "/tmp/hoodie/streaming/source";
 
   @Parameter(names = {"--table-name", "-n"}, description = "Table name for Hoodie sample table")
   private String tableName = "hoodie_test";
@@ -95,15 +96,25 @@ public class HoodieJavaGenerateApp {
       cmd.usage();
       System.exit(1);
     }
+    LOG.warn("Base path "+ cli.tablePath +"/stream1/");
     try (SparkSession spark = cli.getOrCreateSparkSession()) {
-      cli.insert(spark);
+      for(int i =0;i< 100; i++) {
+        cli.commitType = i > 0 ? "append" : "overwrite";
+        cli.insert(spark);
+        LOG.warn("Ingested batch " + i);
+        Thread.sleep(4000);
+        if((i!= 0) && (i%5 == 0)) {
+          LOG.warn("Sleeping extra for every 5th round");
+          Thread.sleep(10000);
+        }
+      }
     }
   }
 
   private SparkSession getOrCreateSparkSession() {
     // Spark session setup..
     SparkSession spark = SparkSession.builder().appName("Hoodie Spark APP")
-        .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer").master("local[1]").getOrCreate();
+        .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer").master("local[2]").getOrCreate();
     spark.sparkContext().setLogLevel("WARN");
     return spark;
   }
@@ -157,9 +168,12 @@ public class HoodieJavaGenerateApp {
     List<String> records1 = recordsToStrings(recordsSoFar);
     Dataset<Row> inputDF1 = spark.read().json(jssc.parallelize(records1, 2));
 
+    inputDF1.coalesce(1).write().mode(SaveMode.Append).json(tablePath+"/stream1/");
+
+
     // Save as hoodie dataset (copy on write)
     // specify the hoodie source
-    DataFrameWriter<Row> writer = inputDF1.write().format("org.apache.hudi")
+    /*DataFrameWriter<Row> writer = inputDF1.write().format("org.apache.hudi")
         // any hoodie client config can be passed like this
         .option("hoodie.insert.shuffle.parallelism", "2")
         // full list in HoodieWriteConfig & its package
@@ -187,6 +201,6 @@ public class HoodieJavaGenerateApp {
     writer.save(tablePath); // ultimately where the dataset will be placed
     FileSystem fs = FileSystem.get(jssc.hadoopConfiguration());
     String commitInstantTime1 = HoodieDataSourceHelpers.latestCommit(fs, tablePath);
-    LOG.info("Commit at instant time :" + commitInstantTime1);
+    LOG.warn("Commit at instant time :" + commitInstantTime1);*/
   }
 }

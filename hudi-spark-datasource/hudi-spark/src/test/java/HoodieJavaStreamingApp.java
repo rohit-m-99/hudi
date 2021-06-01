@@ -133,6 +133,7 @@ public class HoodieJavaStreamingApp {
     SparkSession spark = SparkSession.builder().appName("Hoodie Spark Streaming APP")
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer").master("local[1]").getOrCreate();
     JavaSparkContext jssc = new JavaSparkContext(spark.sparkContext());
+    spark.sparkContext().setLogLevel("INFO");
 
     // folder path clean up and creation, preparing the environment
     FileSystem fs = FileSystem.get(jssc.hadoopConfiguration());
@@ -166,38 +167,61 @@ public class HoodieJavaStreamingApp {
     // thread for spark strucutured streaming
     try {
       Future<Void> streamFuture = executor.submit(() -> {
-        LOG.info("===== Streaming Starting =====");
+        LOG.info("===== Streaming Starting 111 =====");
         stream(streamingInput, DataSourceWriteOptions.UPSERT_OPERATION_OPT_VAL(), ckptPath);
-        LOG.info("===== Streaming Ends =====");
+        LOG.info("===== Streaming Ends 111 =====");
         return null;
       });
 
-      // thread for adding data to the streaming source and showing results over time
-      Future<Integer> showFuture = executor.submit(() -> {
-        LOG.info("===== Showing Starting =====");
-        int numCommits = addInputAndValidateIngestion(spark, fs,  srcPath,0, 100, inputDF1, inputDF2, true);
-        LOG.info("===== Showing Ends =====");
-        return numCommits;
-      });
-
-      // let the threads run
       streamFuture.get();
-      numInitialCommits = showFuture.get();
+
+      /*int counter = 0;
+      int maxRound = 10;
+      int expRecords = 100;
+      int totalCommits = 0;
+      while(counter < maxRound) {
+        // thread for adding data to the streaming source and showing results over time
+        int finalCounter = counter;
+        Dataset<Row> finalInputDF = inputDF1;
+        Dataset<Row> finalInputDF1 = inputDF2;
+        Future<Integer> showFuture = executor.submit(() -> {
+          LOG.info("===== Showing Starting 111 round " + finalCounter + "=====");
+          int numCommits = addInputAndValidateIngestion(spark, fs, srcPath, finalCounter*2, (finalCounter +1)*100, finalInputDF, finalInputDF1, true);
+          LOG.info("===== Showing Ends 111 round " + finalCounter + "=====");
+          return numCommits;
+        });
+
+        if(counter == 0) {
+          // let the threads run
+          streamFuture.get();
+        }
+        totalCommits = showFuture.get();
+        counter++;
+        LOG.info("Generating data for round " + counter);
+
+        records1 = recordsToStrings(dataGen.generateInserts(String.format("%03d" , counter*2 + 1), 100));
+        inputDF1 = spark.read().json(jssc.parallelize(records1, 2));
+
+        records2 = recordsToStrings(dataGen.generateUpdatesForAllRecords(String.format("%03d" , counter*2 + 2)));
+        inputDF2 = spark.read().json(jssc.parallelize(records2, 2));
+      }*/
+
     } finally {
+      LOG.info("Shutting down executor 111 ======= ");
       executor.shutdownNow();
     }
 
     HoodieTableMetaClient metaClient = HoodieTableMetaClient.builder().setConf(jssc.hadoopConfiguration()).setBasePath(tablePath).build();
     if (tableType.equals(HoodieTableType.MERGE_ON_READ.name())) {
       // Ensure we have successfully completed one compaction commit
-      ValidationUtils.checkArgument(metaClient.getActiveTimeline().getCommitTimeline().getInstants().count() == 1);
+      ValidationUtils.checkArgument(metaClient.getActiveTimeline().getCommitTimeline().getInstants().count() == (numInitialCommits/5));
     } else {
       ValidationUtils.checkArgument(metaClient.getActiveTimeline().getCommitTimeline().getInstants().count() >= 1);
     }
 
     // Deletes Stream
     // Need to restart application to ensure spark does not assume there are multiple streams active.
-    spark.close();
+    /*spark.close();
     SparkSession newSpark = SparkSession.builder().appName("Hoodie Spark Streaming APP")
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer").master("local[1]").getOrCreate();
     jssc = new JavaSparkContext(newSpark.sparkContext());
@@ -213,18 +237,18 @@ public class HoodieJavaStreamingApp {
     // thread for spark strucutured streaming
     try {
       Future<Void> streamFuture = executor.submit(() -> {
-        LOG.info("===== Streaming Starting =====");
+        LOG.info("===== Streaming Starting 222 =====");
         stream(delStreamingInput, DataSourceWriteOptions.DELETE_OPERATION_OPT_VAL(), ckptPath2);
-        LOG.info("===== Streaming Ends =====");
+        LOG.info("===== Streaming Ends 222 =====");
         return null;
       });
 
       final int numCommits = numInitialCommits;
       // thread for adding data to the streaming source and showing results over time
       Future<Void> showFuture = executor.submit(() -> {
-        LOG.info("===== Showing Starting =====");
+        LOG.info("===== Showing Starting 222 =====");
         addInputAndValidateIngestion(newSpark, fs, srcPath2, numCommits, 80, inputDF3, null, false);
-        LOG.info("===== Showing Ends =====");
+        LOG.info("===== Showing Ends 222 =====");
         return null;
       });
 
@@ -233,7 +257,7 @@ public class HoodieJavaStreamingApp {
       showFuture.get();
     } finally {
       executor.shutdown();
-    }
+    }*/
   }
 
   private void waitTillNCommits(FileSystem fs, int numCommits, int timeoutSecs, int sleepSecsAfterEachRun)
@@ -295,11 +319,13 @@ public class HoodieJavaStreamingApp {
     }
 
     if (tableType.equals(HoodieTableType.MERGE_ON_READ.name())) {
-      numExpCommits += 1;
-      // Wait for compaction to also finish and track latest timestamp as commit timestamp
-      waitTillNCommits(fs, numExpCommits, 180, 3);
-      commitInstantTime2 = HoodieDataSourceHelpers.latestCommit(fs, tablePath);
-      LOG.info("Compaction commit at instant time :" + commitInstantTime2);
+      if ( numExpCommits%5 == 0) {
+        numExpCommits += 1;
+        // Wait for compaction to also finish and track latest timestamp as commit timestamp
+        waitTillNCommits(fs, numExpCommits, 180, 3);
+        commitInstantTime2 = HoodieDataSourceHelpers.latestCommit(fs, tablePath);
+        LOG.info("Compaction commit at instant time :" + commitInstantTime2);
+      }
     }
 
     /**
@@ -360,14 +386,14 @@ public class HoodieJavaStreamingApp {
         .option(DataSourceWriteOptions.RECORDKEY_FIELD_OPT_KEY(), "_row_key")
         .option(DataSourceWriteOptions.PARTITIONPATH_FIELD_OPT_KEY(), "partition")
         .option(DataSourceWriteOptions.PRECOMBINE_FIELD_OPT_KEY(), "timestamp")
-        .option(HoodieCompactionConfig.INLINE_COMPACT_NUM_DELTA_COMMITS_PROP, "1")
+        .option(HoodieCompactionConfig.INLINE_COMPACT_NUM_DELTA_COMMITS_PROP, "5")
         .option(DataSourceWriteOptions.ASYNC_COMPACT_ENABLE_OPT_KEY(), "true")
         .option(HoodieWriteConfig.TABLE_NAME, tableName).option("checkpointLocation", checkpointLocation)
         .outputMode(OutputMode.Append());
 
     updateHiveSyncConfig(writer);
     StreamingQuery query = writer.trigger(Trigger.ProcessingTime(500)).start(tablePath);
-    query.awaitTermination(streamingDurationInMs);
+    query.awaitTermination(streamingDurationInMs*10000000);
   }
 
   /**

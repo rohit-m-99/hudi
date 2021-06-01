@@ -97,6 +97,7 @@ public class HoodieIncrSource extends RowSource {
      * Config.DEFAULT_HOODIE_SRC_PARTITION_EXTRACTORCLASS));
      */
     String srcPath = props.getString(Config.HOODIE_SRC_BASE_PATH);
+    LOG.warn("Source path in HoodieIncrSource " + srcPath);
     int numInstantsPerFetch = props.getInteger(Config.NUM_INSTANTS_PER_FETCH, Config.DEFAULT_NUM_INSTANTS_PER_FETCH);
     boolean readLatestOnMissingCkpt = props.getBoolean(Config.READ_LATEST_INSTANT_ON_MISSING_CKPT,
         Config.DEFAULT_READ_LATEST_INSTANT_ON_MISSING_CKPT);
@@ -112,6 +113,8 @@ public class HoodieIncrSource extends RowSource {
       LOG.warn("Already caught up. Begin Checkpoint was :" + instantEndpts.getKey());
       return Pair.of(Option.empty(), instantEndpts.getKey());
     }
+
+    LOG.warn("Being instant time " + instantEndpts.getLeft() + ", End instant time " + instantEndpts.getRight());
 
     // Do Incr pull. Set end instant if available
     DataFrameReader reader = sparkSession.read().format("org.apache.hudi")
@@ -146,7 +149,7 @@ public class HoodieIncrSource extends RowSource {
     // Remove Hoodie meta columns except partition path from input source
     final Dataset<Row> src = source.drop(HoodieRecord.HOODIE_META_COLUMNS.stream()
         .filter(x -> !x.equals(HoodieRecord.PARTITION_PATH_METADATA_FIELD)).toArray(String[]::new));
-    // log.info("Final Schema from Source is :" + src.schema());
+    LOG.warn("Final Schema from Source is :" + src.schema());
     return Pair.of(Option.of(src), instantEndpts.getRight());
   }
 }
