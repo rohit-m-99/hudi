@@ -36,7 +36,7 @@ import java.io.IOException;
  * </ol>
  */
 public class OverwriteWithLatestAvroPayload extends BaseAvroPayload
-    implements HoodieRecordPayload<OverwriteWithLatestAvroPayload> {
+    implements HoodieRecordPayload<OverwriteWithLatestAvroPayload, IndexedRecord, Schema> {
 
   public OverwriteWithLatestAvroPayload(GenericRecord record, Comparable orderingVal) {
     super(record, orderingVal);

@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 
 import scala.Tuple2;
 
-public class UpsertPartitioner<T extends HoodieRecordPayload<T>> implements Partitioner  {
+public class UpsertPartitioner<T extends HoodieRecordPayload<T, R, S>, R, S> implements Partitioner {
 
   private static final Logger LOG = LogManager.getLogger(UpsertPartitioner.class);
 
@@ -83,7 +83,7 @@ public class UpsertPartitioner<T extends HoodieRecordPayload<T>> implements Part
   protected final HoodieWriteConfig config;
 
   public UpsertPartitioner(WorkloadProfile profile, HoodieEngineContext context, HoodieTable table,
-                           HoodieWriteConfig config) {
+      HoodieWriteConfig config) {
     updateLocationToBucket = new HashMap<>();
     partitionPathToInsertBucketInfos = new HashMap<>();
     bucketInfoMap = new HashMap<>();
@@ -285,8 +285,7 @@ public class UpsertPartitioner<T extends HoodieRecordPayload<T>> implements Part
   }
 
   /**
-   * Obtains the average record size based on records written during previous commits. Used for estimating how many
-   * records pack into one file.
+   * Obtains the average record size based on records written during previous commits. Used for estimating how many records pack into one file.
    */
   protected static long averageBytesPerRecord(HoodieTimeline commitTimeline, HoodieWriteConfig hoodieWriteConfig) {
     long avgSize = hoodieWriteConfig.getCopyOnWriteRecordSizeEstimate();

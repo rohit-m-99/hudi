@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * The implementation of {@link HoodieRecordPayload} base on avro for testing.
  */
-public class AvroBinaryTestPayload implements HoodieRecordPayload {
+public class AvroBinaryTestPayload implements HoodieRecordPayload<HoodieRecordPayload, IndexedRecord, Schema> {
 
   private final byte[] recordBytes;
 

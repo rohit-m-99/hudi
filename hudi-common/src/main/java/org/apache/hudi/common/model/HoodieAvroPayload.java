@@ -31,7 +31,7 @@ import java.io.IOException;
  * This is a payload to wrap a existing Hoodie Avro Record. Useful to create a HoodieRecord over existing GenericRecords
  * in a hoodie tables (useful in compactions)
  */
-public class HoodieAvroPayload implements HoodieRecordPayload<HoodieAvroPayload> {
+public class HoodieAvroPayload implements HoodieRecordPayload<HoodieAvroPayload, IndexedRecord, Schema> {
 
   // Store the GenericRecord converted to bytes - 1) Doesn't store schema hence memory efficient 2) Makes the payload
   // java serializable

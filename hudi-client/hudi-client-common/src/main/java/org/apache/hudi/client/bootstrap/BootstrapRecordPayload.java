@@ -25,7 +25,7 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 
-public class BootstrapRecordPayload implements HoodieRecordPayload<BootstrapRecordPayload> {
+public class BootstrapRecordPayload implements HoodieRecordPayload<BootstrapRecordPayload, IndexedRecord, Schema> {
 
   private final GenericRecord record;
 

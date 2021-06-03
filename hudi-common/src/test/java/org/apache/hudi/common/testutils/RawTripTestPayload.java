@@ -44,7 +44,7 @@ import java.util.zip.InflaterInputStream;
  * Example row change event based on some example data used by testcases. The data avro schema is
  * src/test/resources/schema1.
  */
-public class RawTripTestPayload implements HoodieRecordPayload<RawTripTestPayload> {
+public class RawTripTestPayload implements HoodieRecordPayload<RawTripTestPayload, IndexedRecord, Schema> {
 
   private static final transient ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private String partitionPath;

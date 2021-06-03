@@ -39,7 +39,7 @@ import java.util.zip.InflaterInputStream;
 /**
  * Hoodie json payload.
  */
-public class HoodieJsonPayload implements HoodieRecordPayload<HoodieJsonPayload> {
+public class HoodieJsonPayload implements HoodieRecordPayload<HoodieJsonPayload, IndexedRecord, Schema> {
 
   private byte[] jsonDataCompressed;
   private int dataSize;

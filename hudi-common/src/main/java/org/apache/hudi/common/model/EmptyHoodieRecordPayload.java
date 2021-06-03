@@ -27,7 +27,7 @@ import org.apache.avro.generic.IndexedRecord;
 /**
  * Empty payload used for deletions.
  */
-public class EmptyHoodieRecordPayload implements HoodieRecordPayload<EmptyHoodieRecordPayload> {
+public class EmptyHoodieRecordPayload implements HoodieRecordPayload<EmptyHoodieRecordPayload, IndexedRecord, Schema> {
 
   public EmptyHoodieRecordPayload() {
   }
