@@ -13,46 +13,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 first_insert:
   config:
-    record_size: 7000
+    record_size: 700
     num_partitions_insert: 1
     repeat_count: 1
     num_records_insert: 1000
   type: InsertNode
   deps: none
-second_insert:
+first_hive_sync:
   config:
-    record_size: 7000
-    num_partitions_insert: 1
-    repeat_count: 1
-    num_records_insert: 10000
+    queue_name: "adhoc"
+    engine: "mr"
+  type: HiveSyncNode
   deps: first_insert
-  type: InsertNode
-third_insert:
-  config:
-    record_size: 7000
-    num_partitions_insert: 1
-    repeat_count: 1
-    num_records_insert: 300
-  deps: second_insert
-  type: InsertNode
-first_validate:
-  config:
-  type: ValidateDatasetNode
-  deps: third_insert
 first_upsert:
   config:
-    record_size: 7000
+    record_size: 700
     num_partitions_insert: 1
-    num_records_insert: 300
+    num_records_insert: 500
     repeat_count: 1
-    num_records_upsert: 100
+    num_records_upsert: 250
     num_partitions_upsert: 1
   type: UpsertNode
-  deps: first_validate
-first_hive_sync:
+  deps: first_hive_sync
+second_hive_sync:
   config:
     queue_name: "adhoc"
     engine: "mr"
@@ -60,16 +45,6 @@ first_hive_sync:
   deps: first_upsert
 second_validate:
   config:
+    delete_input_data : true
   type: ValidateDatasetNode
-  deps: first_hive_sync
-first_delete:
-  config:
-    num_partitions_delete: 1
-    num_records_delete: 20
-  deps: second_validate
-  type: DeleteNode
-third_validate:
-  config:
-    delete_input_data: true
-  type: ValidateDatasetNode
-  deps: first_delete
+  deps: second_hive_sync

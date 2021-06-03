@@ -69,4 +69,13 @@ public class DeltaWriteStats implements Serializable {
     this.recordsWritten = recordsWritten;
   }
 
+  @Override
+  public String toString() {
+    return "DeltaWriteStats{" +
+        "filePath='" + filePath + '\'' +
+        ", bytesWritten=" + bytesWritten +
+        ", recordsWritten=" + recordsWritten +
+        ", partitionPathRecordKey=" + partitionPathRecordKey +
+        '}';
+  }
 }

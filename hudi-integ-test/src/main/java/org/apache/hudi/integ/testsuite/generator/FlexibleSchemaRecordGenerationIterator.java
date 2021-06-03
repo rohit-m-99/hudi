@@ -20,6 +20,11 @@ package org.apache.hudi.integ.testsuite.generator;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+<<<<<<< Updated upstream
+=======
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+>>>>>>> Stashed changes
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -31,6 +36,8 @@ import java.util.Set;
  * A GenericRecordGeneratorIterator for the custom schema of the workload. Implements {@link Iterator} to allow for iteration semantics.
  */
 public class FlexibleSchemaRecordGenerationIterator implements Iterator<GenericRecord> {
+
+  private static Logger LOG = LoggerFactory.getLogger(FlexibleSchemaRecordGenerationIterator.class);
 
   // Stores how many records to generate as part of this iterator. Ideally, one iterator is started per spark
   // partition.
@@ -50,6 +57,7 @@ public class FlexibleSchemaRecordGenerationIterator implements Iterator<GenericR
       List<String> partitionPathFieldNames, int partitionIndex) {
     this.counter = maxEntriesToProduce;
     this.partitionPathFieldNames = new HashSet<>(partitionPathFieldNames);
+    // LOG.warn("FlexibleSchemaRecordGenerationIterator :: init :: Partition path field names " + Arrays.toString(partitionPathFieldNames.toArray()));
     Schema schema = new Schema.Parser().parse(schemaStr);
     this.generator = new GenericRecordFullPayloadGenerator(schema, minPayloadSize, partitionIndex);
   }
@@ -64,10 +72,22 @@ public class FlexibleSchemaRecordGenerationIterator implements Iterator<GenericR
     this.counter--;
     if (lastRecord == null) {
       GenericRecord record = this.generator.getNewPayload(partitionPathFieldNames);
+<<<<<<< Updated upstream
       lastRecord = record;
       return record;
     } else {
       return this.generator.randomize(lastRecord, partitionPathFieldNames);
+=======
+      record.put(preCombineField, new Long(preCombineFieldValue));
+      lastRecord = record;
+      //LOG.warn("FlexibleSchemaRecordGenerationIterator :: within next() if :: record generated " + record);
+      return record;
+    } else {
+      GenericRecord toReturn = this.generator.randomize(lastRecord, this.partitionPathFieldNames);
+      toReturn.put(preCombineField, new Long(preCombineFieldValue));
+      //LOG.warn("FlexibleSchemaRecordGenerationIterator :: within next() else :: record generated " + toReturn);
+      return toReturn;
+>>>>>>> Stashed changes
     }
   }
 }

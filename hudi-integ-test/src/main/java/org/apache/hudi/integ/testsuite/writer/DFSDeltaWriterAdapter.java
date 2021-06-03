@@ -19,6 +19,8 @@
 package org.apache.hudi.integ.testsuite.writer;
 
 import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,8 +32,20 @@ import java.util.List;
  */
 public class DFSDeltaWriterAdapter implements DeltaWriterAdapter<GenericRecord> {
 
+<<<<<<< Updated upstream
   private DeltaInputWriter deltaInputGenerator;
+=======
+  private static Logger LOG = LoggerFactory.getLogger(DFSDeltaWriterAdapter.class);
+
+  private DeltaInputWriter deltaInputWriter;
+>>>>>>> Stashed changes
   private List<DeltaWriteStats> metrics = new ArrayList<>();
+  private int preCombineFieldVal = 0;
+
+  public DFSDeltaWriterAdapter(DeltaInputWriter<GenericRecord> deltaInputWriter, int preCombineFieldVal) {
+    this.deltaInputWriter = deltaInputWriter;
+    this.preCombineFieldVal = preCombineFieldVal;
+  }
 
   public DFSDeltaWriterAdapter(DeltaInputWriter<GenericRecord> deltaInputGenerator) {
     this.deltaInputGenerator = deltaInputGenerator;
@@ -41,9 +55,17 @@ public class DFSDeltaWriterAdapter implements DeltaWriterAdapter<GenericRecord> 
   public List<DeltaWriteStats> write(Iterator<GenericRecord> input) throws IOException {
     while (input.hasNext()) {
       GenericRecord next = input.next();
+<<<<<<< Updated upstream
       if (this.deltaInputGenerator.canWrite()) {
         this.deltaInputGenerator.writeData(next);
       } else if (input.hasNext()) {
+=======
+      next.put("ts", new Long(preCombineFieldVal));
+      // LOG.warn("DFSDeltaWriterAdapter :: record to be written " + next.toString());
+      if (this.deltaInputWriter.canWrite()) {
+        this.deltaInputWriter.writeData(next);
+      } else {
+>>>>>>> Stashed changes
         rollOver();
         this.deltaInputGenerator.writeData(next);
       }

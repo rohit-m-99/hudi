@@ -18,23 +18,29 @@
 
 package org.apache.hudi.integ.testsuite.writer;
 
-import java.io.IOException;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.hudi.common.util.StringUtils;
 import org.apache.hudi.integ.testsuite.configuration.DFSDeltaConfig;
 import org.apache.hudi.integ.testsuite.configuration.DeltaConfig;
 import org.apache.hudi.integ.testsuite.reader.DeltaInputType;
 
+import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+
 /**
- * A factory to help instantiate different {@link DeltaWriterAdapter}s depending on the {@link DeltaOutputMode} and
- * {@link DeltaInputType}.
+ * A factory to help instantiate different {@link DeltaWriterAdapter}s depending on the {@link DeltaOutputMode} and {@link DeltaInputType}.
  */
 public class DeltaWriterFactory {
+
+  private static Logger LOG = LoggerFactory.getLogger(DeltaWriterFactory.class);
 
   private DeltaWriterFactory() {
   }
 
   public static DeltaWriterAdapter getDeltaWriterAdapter(DeltaConfig config, Integer batchId) throws IOException {
+    // LOG.warn("DeltaWriterFactory :: Initializing DeltaWriterAdapter for batchId " + batchId);
     switch (config.getDeltaOutputMode()) {
       case DFS:
         switch (config.getDeltaInputType()) {
@@ -44,9 +50,9 @@ public class DeltaWriterFactory {
             DeltaInputWriter<GenericRecord> fileDeltaInputGenerator = new AvroFileDeltaInputWriter(
                 dfsDeltaConfig.getConfiguration(),
                 StringUtils
-                    .join(new String[]{dfsDeltaConfig.getDeltaBasePath(), dfsDeltaConfig.getBatchId().toString()},
+                    .join(new String[] {dfsDeltaConfig.getDeltaBasePath(), dfsDeltaConfig.getBatchId().toString()},
                         "/"), dfsDeltaConfig.getSchemaStr(), dfsDeltaConfig.getMaxFileSize());
-            return new DFSDeltaWriterAdapter(fileDeltaInputGenerator);
+            return new DFSDeltaWriterAdapter(fileDeltaInputGenerator, batchId);
           default:
             throw new IllegalArgumentException("Invalid delta input format " + config.getDeltaInputType());
         }

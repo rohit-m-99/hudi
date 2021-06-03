@@ -59,7 +59,14 @@ public class UpdateGeneratorIterator implements Iterator<GenericRecord> {
   @Override
   public GenericRecord next() {
     GenericRecord newRecord = itr.next();
+<<<<<<< Updated upstream
     return this.generator.randomize(newRecord, this.blackListedFields);
+=======
+    GenericRecord toReturn = this.generator.randomize(newRecord, this.blackListedFields);
+    toReturn.put(preCombineField, new Long(preCombineFieldValue));
+    //LOG.warn("UpdateGeneratorIterator : generated record " + toReturn.toString());
+    return toReturn;
+>>>>>>> Stashed changes
   }
 
 }

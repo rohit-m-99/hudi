@@ -18,26 +18,6 @@
 
 package org.apache.hudi.integ.testsuite.reader;
 
-import static java.util.Map.Entry.comparingByValue;
-import static java.util.stream.Collectors.toMap;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.generic.IndexedRecord;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hudi.avro.HoodieAvroUtils;
 import org.apache.hudi.common.fs.FSUtils;
 import org.apache.hudi.common.model.FileSlice;
@@ -51,6 +31,12 @@ import org.apache.hudi.common.util.Option;
 import org.apache.hudi.common.util.ParquetReaderIterator;
 import org.apache.hudi.common.util.ValidationUtils;
 import org.apache.hudi.config.HoodieMemoryConfig;
+
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.IndexedRecord;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -58,11 +44,27 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
 import scala.Tuple2;
 
+import static java.util.Map.Entry.comparingByValue;
+import static java.util.stream.Collectors.toMap;
+
 /**
- * This class helps to generate updates from an already existing hoodie dataset. It supports generating updates in
- * across partitions, files and records.
+ * This class helps to generate updates from an already existing hoodie dataset. It supports generating updates in across partitions, files and records.
  */
 public class DFSHoodieDatasetInputReader extends DFSDeltaInputReader {
 
@@ -133,7 +135,7 @@ public class DFSHoodieDatasetInputReader extends DFSDeltaInputReader {
 
   private JavaRDD<GenericRecord> fetchRecordsFromDataset(Option<Integer> numPartitions, Option<Integer> numFiles,
       Option<Long> numRecordsToUpdate, Option<Double> percentageRecordsPerFile) throws IOException {
-    log.info("NumPartitions : {}, NumFiles : {}, numRecordsToUpdate : {}, percentageRecordsPerFile : {}",
+    log.warn("DFSHoodieDatasetInputReader :: NumPartitions : {}, NumFiles : {}, numRecordsToUpdate : {}, percentageRecordsPerFile : {}",
         numPartitions, numFiles, numRecordsToUpdate, percentageRecordsPerFile);
     final List<String> partitionPaths = getPartitions(numPartitions);
     // Read all file slices in the partition
@@ -150,19 +152,21 @@ public class DFSHoodieDatasetInputReader extends DFSDeltaInputReader {
     if (!numFiles.isPresent() || numFiles.get() == 0) {
       // If num files are not passed, find the number of files to update based on total records to update and records
       // per file
-      numFilesToUpdate = (int)Math.ceil((double)numRecordsToUpdate.get() / recordsInSingleFile);
+      numFilesToUpdate = (int) Math.ceil((double) numRecordsToUpdate.get() / recordsInSingleFile);
       // recordsInSingleFile is not average so we still need to account for bias is records distribution
       // in the files. Limit to the maximum number of files available.
       int totalExistingFilesCount = partitionToFileIdCountMap.values().stream().reduce((a, b) -> a + b).get();
       numFilesToUpdate = Math.min(numFilesToUpdate, totalExistingFilesCount);
-      log.info("Files to update {}", numFilesToUpdate);
-      numRecordsToUpdatePerFile = recordsInSingleFile;
+      //log.warn("Files to update {}", numFilesToUpdate);
+      numRecordsToUpdatePerFile = 10;
+      log.warn("DFSHoodieDatasetInputReader :: aaa numFilesToUpdate " + numFilesToUpdate + ", numRecordsToUpdatePerFile " + numRecordsToUpdatePerFile);
     } else {
       // If num files is passed, find the number of records per file based on either percentage or total records to
       // update and num files passed
       numFilesToUpdate = numFiles.get();
       numRecordsToUpdatePerFile = percentageRecordsPerFile.isPresent() ? (long) (recordsInSingleFile
           * percentageRecordsPerFile.get()) : numRecordsToUpdate.get() / numFilesToUpdate;
+      log.warn("DFSHoodieDatasetInputReader :: bbb numFilesToUpdate " + numFilesToUpdate + ", numRecordsToUpdatePerFile " + numRecordsToUpdatePerFile);
     }
 
     // Adjust the number of files to read per partition based on the requested partition & file counts
@@ -214,7 +218,7 @@ public class DFSHoodieDatasetInputReader extends DFSDeltaInputReader {
             LinkedHashMap::new));
 
     // Limit files to be read per partition
-    int numFilesPerPartition = (int) Math.ceil((double)numFiles / numPartitions);
+    int numFilesPerPartition = (int) Math.ceil((double) numFiles / numPartitions);
     Map<String, Integer> adjustedPartitionToFileIdCountMap = new HashMap<>();
     partitionToFileIdCountSortedMap.entrySet().stream().forEach(e -> {
       if (e.getValue() <= numFilesPerPartition) {
@@ -272,9 +276,7 @@ public class DFSHoodieDatasetInputReader extends DFSDeltaInputReader {
   }
 
   /**
-   * Returns the number of elements remaining in {@code iterator}. The iterator
-   * will be left exhausted: its {@code hasNext()} method will return
-   * {@code false}.
+   * Returns the number of elements remaining in {@code iterator}. The iterator will be left exhausted: its {@code hasNext()} method will return {@code false}.
    */
   private static int iteratorSize(Iterator<?> iterator) {
     int count = 0;
@@ -286,11 +288,8 @@ public class DFSHoodieDatasetInputReader extends DFSDeltaInputReader {
   }
 
   /**
-   * Creates an iterator returning the first {@code limitSize} elements of the
-   * given iterator. If the original iterator does not contain that many
-   * elements, the returned iterator will have the same behavior as the original
-   * iterator. The returned iterator supports {@code remove()} if the original
-   * iterator does.
+   * Creates an iterator returning the first {@code limitSize} elements of the given iterator. If the original iterator does not contain that many elements, the returned iterator will have the same
+   * behavior as the original iterator. The returned iterator supports {@code remove()} if the original iterator does.
    *
    * @param iterator the iterator to limit
    * @param limitSize the maximum number of elements in the returned iterator
