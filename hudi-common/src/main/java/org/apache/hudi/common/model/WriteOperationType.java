@@ -34,6 +34,7 @@ public enum WriteOperationType {
   UPSERT_PREPPED("upsert_prepped"),
   // bulk insert
   BULK_INSERT("bulk_insert"),
+  BULK_INSERT_V2("bulk_insert_v2"),
   BULK_INSERT_PREPPED("bulk_insert_prepped"),
   // delete
   DELETE("delete"),
@@ -72,6 +73,8 @@ public enum WriteOperationType {
         return UPSERT_PREPPED;
       case "bulk_insert":
         return BULK_INSERT;
+      case "bulk_insert_v2":
+        return BULK_INSERT_V2;
       case "bulk_insert_prepped":
         return BULK_INSERT_PREPPED;
       case "delete":

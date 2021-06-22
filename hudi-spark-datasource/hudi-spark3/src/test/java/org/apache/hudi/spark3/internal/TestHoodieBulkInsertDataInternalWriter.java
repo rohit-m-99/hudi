@@ -22,6 +22,7 @@ import org.apache.hudi.common.testutils.HoodieTestDataGenerator;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.internal.HoodieBulkInsertInternalWriterTestBase;
+import org.apache.hudi.spark3.internal.nometa.HoodieBulkInsertDataInternalWriterV2;
 import org.apache.hudi.table.HoodieSparkTable;
 import org.apache.hudi.table.HoodieTable;
 
@@ -87,6 +88,51 @@ public class TestHoodieBulkInsertDataInternalWriter extends
     }
   }
 
+  @Test
+  public void testDataInternalWriterV2() throws Exception {
+    // init config and table
+    HoodieWriteConfig cfg = getConfigBuilder(basePath).build();
+    HoodieTable table = HoodieSparkTable.create(cfg, context, metaClient);
+    // execute N rounds
+    for (int i = 0; i < 1; i++) {
+      String instantTime = "00" + i;
+      // init writer
+      HoodieBulkInsertDataInternalWriterV2 writer = new HoodieBulkInsertDataInternalWriterV2(table, cfg, instantTime, RANDOM.nextInt(100000), RANDOM.nextLong(), STRUCT_TYPE,
+          -1);
+
+      int size = 10;
+      // write N rows to partition1, N rows to partition2 and N rows to partition3 ... Each batch should create a new RowCreateHandle and a new file
+      int batches = 1;
+      Dataset<Row> totalInputRows = null;
+
+      for (int j = 0; j < batches; j++) {
+        String partitionPath = HoodieTestDataGenerator.DEFAULT_PARTITION_PATHS[j % 3];
+        Dataset<Row> inputRows = getRandomRows(sqlContext, size, partitionPath, false);
+        writeRows(inputRows, writer);
+        if (totalInputRows == null) {
+          totalInputRows = inputRows;
+        } else {
+          totalInputRows = totalInputRows.union(inputRows);
+        }
+      }
+
+      HoodieWriterCommitMessage commitMetadata = (HoodieWriterCommitMessage) writer.commit();
+      Option<List<String>> fileAbsPaths = Option.of(new ArrayList<>());
+      Option<List<String>> fileNames = Option.of(new ArrayList<>());
+
+      // verify write statuses
+      assertWriteStatuses(commitMetadata.getWriteStatuses(), batches, size, fileAbsPaths, fileNames);
+
+      // verify rows
+      Dataset<Row> result = sqlContext.read().parquet(fileAbsPaths.get().toArray(new String[0]));
+      List<Row> rows = result.collectAsList();
+      int count = 0;
+      while (count < 3) {
+        System.out.println("Row " + rows.get(count++).mkString(","));
+      }
+      //assertOutput(totalInputRows, result, instantTime, fileNames);
+    }
+  }
 
   /**
    * Issue some corrupted or wrong schematized InternalRow after few valid InternalRows so that global error is thrown. write batch 1 of valid records write batch2 of invalid records which is expected
@@ -140,6 +186,15 @@ public class TestHoodieBulkInsertDataInternalWriter extends
   }
 
   private void writeRows(Dataset<Row> inputRows, HoodieBulkInsertDataInternalWriter writer)
+      throws Exception {
+    List<InternalRow> internalRows = toInternalRows(inputRows, ENCODER);
+    // issue writes
+    for (InternalRow internalRow : internalRows) {
+      writer.write(internalRow);
+    }
+  }
+
+  private void writeRows(Dataset<Row> inputRows, HoodieBulkInsertDataInternalWriterV2 writer)
       throws Exception {
     List<InternalRow> internalRows = toInternalRows(inputRows, ENCODER);
     // issue writes

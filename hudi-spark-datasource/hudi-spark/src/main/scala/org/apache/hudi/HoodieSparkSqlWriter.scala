@@ -137,6 +137,13 @@ object HoodieSparkSqlWriter {
       // short-circuit if bulk_insert via row is enabled.
       // scalastyle:off
       if (parameters(ENABLE_ROW_WRITER_OPT_KEY).toBoolean &&
+        operation == WriteOperationType.BULK_INSERT_V2) {
+        val (success, commitTime: common.util.Option[String]) = bulkInsertAsRowV2(sqlContext, parameters, df, tblName,
+          basePath, path, instantTime)
+        return (success, commitTime, common.util.Option.empty(), hoodieWriteClient.orNull, tableConfig)
+      }
+
+      if (parameters(ENABLE_ROW_WRITER_OPT_KEY).toBoolean &&
         operation == WriteOperationType.BULK_INSERT) {
         val (success, commitTime: common.util.Option[String]) = bulkInsertAsRow(sqlContext, parameters, df, tblName,
                                                                                 basePath, path, instantTime)
@@ -363,6 +370,52 @@ object HoodieSparkSqlWriter {
     } else {
       true
     }
+    (syncHiveSuccess, common.util.Option.ofNullable(instantTime))
+  }
+
+  def bulkInsertAsRowV2(sqlContext: SQLContext,
+                      parameters: Map[String, String],
+                      df: DataFrame,
+                      tblName: String,
+                      basePath: Path,
+                      path: Option[String],
+                      instantTime: String): (Boolean, common.util.Option[String]) = {
+    val sparkContext = sqlContext.sparkContext
+    // register classes & schemas
+    val (structName, nameSpace) = AvroConversionUtils.getAvroRecordNameAndNamespace(tblName)
+    sparkContext.getConf.registerKryoClasses(
+      Array(classOf[org.apache.avro.generic.GenericData],
+        classOf[org.apache.avro.Schema]))
+    val schema = AvroConversionUtils.convertStructTypeToAvroSchema(df.schema, structName, nameSpace)
+    sparkContext.getConf.registerAvroSchemas(schema)
+    log.info(s"Registered avro schema : ${schema.toString(true)}")
+    if (parameters(INSERT_DROP_DUPS_OPT_KEY).toBoolean) {
+      throw new HoodieException("Dropping duplicates with bulk_insert in row writer path is not supported yet")
+    }
+    val params = parameters.updated(HoodieWriteConfig.AVRO_SCHEMA, schema.toString)
+    // val writeConfig = DataSourceUtils.createHoodieConfig(schema.toString, path.get, tblName, mapAsJavaMap(params))
+    //val hoodieDF = HoodieDatasetBulkInsertHelper.prepareHoodieDatasetForBulkInsert(sqlContext, writeConfig, df, structName, nameSpace)
+    if (SPARK_VERSION.startsWith("2.")) {
+      throw new HoodieException("Notyet supported for spark2")
+    } else if (SPARK_VERSION.startsWith("3.")) {
+      df.write.format("org.apache.hudi.spark3.internal.nometa")
+        .option(DataSourceInternalWriterHelper.INSTANT_TIME_OPT_KEY, instantTime)
+        .option(HoodieWriteConfig.BULKINSERT_INPUT_DATA_SCHEMA_DDL, df.schema.toDDL)
+        .options(params)
+        .mode(SaveMode.Append)
+        .save()
+    } else {
+      throw new HoodieException("Bulk insert using row writer is not supported with current Spark version."
+        + " To use row writer please switch to spark 2 or spark 3")
+    }
+    val hiveSyncEnabled = params.get(HIVE_SYNC_ENABLED_OPT_KEY).exists(r => r.toBoolean)
+    val metaSyncEnabled = params.get(META_SYNC_ENABLED_OPT_KEY).exists(r => r.toBoolean)
+    val syncHiveSuccess =
+      if (hiveSyncEnabled || metaSyncEnabled) {
+        metaSync(sqlContext.sparkSession, parameters, basePath, df.schema)
+      } else {
+        true
+      }
     (syncHiveSuccess, common.util.Option.ofNullable(instantTime))
   }
 
