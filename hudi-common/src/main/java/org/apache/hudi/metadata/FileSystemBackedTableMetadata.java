@@ -131,8 +131,8 @@ public class FileSystemBackedTableMetadata implements HoodieTableMetadata {
   }
 
   @Override
-  public boolean isInSync() {
-    return true;
+  public Option<String> getLatestCompactionTime() {
+    throw new UnsupportedOperationException();
   }
 
   @Override

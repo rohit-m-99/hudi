@@ -21,7 +21,11 @@ package org.apache.hudi.table.action;
 import java.io.Serializable;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hudi.avro.model.HoodieCleanMetadata;
+import org.apache.hudi.avro.model.HoodieRestoreMetadata;
+import org.apache.hudi.avro.model.HoodieRollbackMetadata;
 import org.apache.hudi.common.engine.HoodieEngineContext;
+import org.apache.hudi.common.model.HoodieCommitMetadata;
 import org.apache.hudi.common.model.HoodieRecordPayload;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.table.HoodieTable;
@@ -46,4 +50,20 @@ public abstract class BaseActionExecutor<T extends HoodieRecordPayload, I, K, O,
   }
 
   public abstract R execute();
+
+  protected final void syncTableMetadata(HoodieCommitMetadata metadata) {
+    table.getMetadataWriter().ifPresent(w -> w.update(metadata, instantTime));
+  }
+
+  protected final void syncTableMetadata(HoodieCleanMetadata metadata) {
+    table.getMetadataWriter().ifPresent(w -> w.update(metadata, instantTime));
+  }
+
+  protected final void syncTableMetadata(HoodieRollbackMetadata metadata) {
+    table.getMetadataWriter().ifPresent(w -> w.update(metadata, instantTime));
+  }
+
+  protected final void syncTableMetadata(HoodieRestoreMetadata metadata) {
+    table.getMetadataWriter().ifPresent(w -> w.update(metadata, instantTime));
+  }
 }

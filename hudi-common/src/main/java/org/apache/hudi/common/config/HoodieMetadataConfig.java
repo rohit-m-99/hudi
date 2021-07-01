@@ -41,10 +41,11 @@ public final class HoodieMetadataConfig extends HoodieConfig {
   // Enable the internal Metadata Table which saves file listings
   public static final ConfigProperty<Boolean> ENABLE = ConfigProperty
       .key(METADATA_PREFIX + ".enable")
-      .defaultValue(false)
+      .defaultValue(true)
       .sinceVersion("0.7.0")
       .withDocumentation("Enable the internal metadata table which serves table metadata like level file listings");
 
+<<<<<<< HEAD
   // Enable syncing the Metadata Table
   public static final ConfigProperty<Boolean> SYNC_ENABLE = ConfigProperty
       .key(METADATA_PREFIX + ".sync.enable")
@@ -59,6 +60,8 @@ public final class HoodieMetadataConfig extends HoodieConfig {
       .sinceVersion("0.7.0")
       .withDocumentation("Validate contents of metadata table on each access; e.g against the actual listings from lake storage");
 
+=======
+>>>>>>> 35a1b9a68 ([HUDI-848] Synchronous commits before completion of instants.)
   public static final boolean DEFAULT_METADATA_ENABLE_FOR_READERS = false;
 
   // Enable metrics for internal Metadata Table
@@ -153,10 +156,6 @@ public final class HoodieMetadataConfig extends HoodieConfig {
     return enabled() && getBoolean(HoodieMetadataConfig.SYNC_ENABLE);
   }
 
-  public boolean validateFileListingMetadata() {
-    return getBoolean(VALIDATE_ENABLE);
-  }
-
   public boolean enableMetrics() {
     return getBoolean(METRICS_ENABLE);
   }
@@ -193,11 +192,6 @@ public final class HoodieMetadataConfig extends HoodieConfig {
 
     public Builder enableMetrics(boolean enableMetrics) {
       metadataConfig.setValue(METRICS_ENABLE, String.valueOf(enableMetrics));
-      return this;
-    }
-
-    public Builder validate(boolean validate) {
-      metadataConfig.setValue(VALIDATE_ENABLE, String.valueOf(validate));
       return this;
     }
 

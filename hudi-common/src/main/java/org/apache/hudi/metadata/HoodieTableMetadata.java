@@ -23,7 +23,6 @@ import org.apache.hudi.common.config.SerializableConfiguration;
 import org.apache.hudi.common.engine.HoodieEngineContext;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.util.Option;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
@@ -111,5 +110,8 @@ public interface HoodieTableMetadata extends Serializable, AutoCloseable {
    */
   Option<String> getUpdateTime();
 
-  boolean isInSync();
+  /**
+   * Returns the timestamp of the latest compaction.
+   */
+  Option<String> getLatestCompactionTime();
 }
