@@ -46,6 +46,10 @@ for more implementation details and follow this [page](/docs/concurrency_control
 - Performance improvement of Metadata table.
 - Performance improvement of Clustering.
 
+### Kafka auto reset config
+- There was a bug wrt "auto.offset.reset" config in 0.8.0. Please use "auto.reset.offsets" if you are looking to override this config 
+value. We have fixed the bug in master and so with next release, setting kafka's native config "auto.offset.reset" would suffice.
+
 ### Raw Release Notes
 The raw release notes are available [here](https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12322822&version=12349423)
 
