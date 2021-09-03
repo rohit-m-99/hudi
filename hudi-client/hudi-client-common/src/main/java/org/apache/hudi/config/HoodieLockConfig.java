@@ -223,7 +223,7 @@ public class HoodieLockConfig extends HoodieConfig {
     }
 
     public HoodieLockConfig.Builder withLockProviderClass(String lockProviderClassName) {
-      lockConfig.setValue(LOCK_PROVIDER_CLASS_PROP, lockProviderClassName);
+      lockConfig.setValue(LOCK_PROVIDER_CLASS_NAME, lockProviderClassName);
       return this;
     }
 

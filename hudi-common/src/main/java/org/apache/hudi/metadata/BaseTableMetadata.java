@@ -27,7 +27,6 @@ import org.apache.hudi.common.fs.FSUtils;
 import org.apache.hudi.common.metrics.Registry;
 import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
-import org.apache.hudi.common.table.timeline.HoodieActiveTimeline;
 import org.apache.hudi.common.table.timeline.HoodieInstant;
 import org.apache.hudi.common.util.HoodieTimer;
 import org.apache.hudi.common.util.Option;
@@ -217,9 +216,7 @@ public abstract class BaseTableMetadata implements HoodieTableMetadata {
   }
 
   public Option<String> getReaderTime() {
-    if (timelineMergedMetadata == null) {
-      return Option.empty();
-    }
-    return timelineMergedMetadata.getSyncedInstantTime();
+    // TODO fix.
+    return Option.empty();
   }
 }

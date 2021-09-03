@@ -452,7 +452,6 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
         writer.close();
       } catch (InterruptedException e) {
         throw new IOException("Failed to created record level index shard " + shardFileId, e);
->>>>>>> 35a1b9a68 ([HUDI-848] Synchronous commits before completion of instants.)
       }
     }
   }
@@ -514,7 +513,8 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
       this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, HoodieTimeline.DELTA_COMMIT_ACTION, instantTime)),
           Option.empty());
       try {
-        List<HoodieRecord> records = HoodieTableMetadataUtil.convertMetadataToRecords(restoreMetadata, instantTime, metadata.getSyncedInstantTime());
+        List<HoodieRecord> records = HoodieTableMetadataUtil.convertMetadataToRecords(metaClient.getActiveTimeline(),
+            restoreMetadata, instantTime, metadata.getSyncedInstantTime());
         commit(records, MetadataPartitionType.FILES.partitionPath(), instantTime);
       } finally {
         this.txnManager.endTransaction();
@@ -545,7 +545,7 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
           }
         }
 
-        List<HoodieRecord> records = HoodieTableMetadataUtil.convertMetadataToRecords(rollbackMetadata, instantTime,
+        List<HoodieRecord> records = HoodieTableMetadataUtil.convertMetadataToRecords(metaClient.getActiveTimeline(), rollbackMetadata, instantTime,
             metadata.getSyncedInstantTime(), wasSynced);
         commit(records, MetadataPartitionType.FILES.partitionPath(), instantTime);
       } finally {

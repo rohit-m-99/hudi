@@ -686,7 +686,7 @@ public abstract class HoodieTable<T extends HoodieRecordPayload, I, K, O> implem
   }
 
   public Option<HoodieTableMetadataWriter> getMetadataWriter() {
-    ValidationUtils.checkArgument(!config.useFileListingMetadata(), "Metadata Table support not enabled in this Table");
+    ValidationUtils.checkArgument(!config.isMetadataTableEnabled(), "Metadata Table support not enabled in this Table");
     return Option.empty();
   }
 }

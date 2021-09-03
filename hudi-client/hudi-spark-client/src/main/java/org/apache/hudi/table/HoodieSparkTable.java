@@ -73,7 +73,7 @@ public abstract class HoodieSparkTable<T extends HoodieRecordPayload>
 
   @Override
   public Option<HoodieTableMetadataWriter> getMetadataWriter() {
-    if (!config.useFileListingMetadata()) {
+    if (!config.isMetadataTableEnabled()) {
       return Option.empty();
     }
 

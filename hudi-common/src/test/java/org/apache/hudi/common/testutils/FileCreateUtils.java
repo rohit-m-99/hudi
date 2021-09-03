@@ -337,7 +337,7 @@ public class FileCreateUtils {
     deleteMetaFile(basePath, instantTime, HoodieTimeline.DELTA_COMMIT_EXTENSION, fs);
   }
 
-  public static void deleteCommit(String basePath, String instantTime) throws IOException {
+  /*public static void deleteCommit(String basePath, String instantTime) throws IOException {
     deleteMetaFile(basePath, instantTime, HoodieTimeline.COMMIT_EXTENSION);
   }
 
@@ -347,5 +347,5 @@ public class FileCreateUtils {
 
   public static void deleteInflightCommit(String basePath, String instantTime) throws IOException {
     deleteMetaFile(basePath, instantTime, HoodieTimeline.INFLIGHT_COMMIT_EXTENSION);
-  }
+  }*/
 }

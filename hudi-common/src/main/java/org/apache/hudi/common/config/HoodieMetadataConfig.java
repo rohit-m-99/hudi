@@ -45,7 +45,6 @@ public final class HoodieMetadataConfig extends HoodieConfig {
       .sinceVersion("0.7.0")
       .withDocumentation("Enable the internal metadata table which serves table metadata like level file listings");
 
-<<<<<<< HEAD
   // Enable syncing the Metadata Table
   public static final ConfigProperty<Boolean> SYNC_ENABLE = ConfigProperty
       .key(METADATA_PREFIX + ".sync.enable")
@@ -53,15 +52,6 @@ public final class HoodieMetadataConfig extends HoodieConfig {
       .sinceVersion("0.9.0")
       .withDocumentation("Enable syncing of metadata table from actions on the dataset");
 
-  // Validate contents of Metadata Table on each access against the actual filesystem
-  public static final ConfigProperty<Boolean> VALIDATE_ENABLE = ConfigProperty
-      .key(METADATA_PREFIX + ".validate")
-      .defaultValue(false)
-      .sinceVersion("0.7.0")
-      .withDocumentation("Validate contents of metadata table on each access; e.g against the actual listings from lake storage");
-
-=======
->>>>>>> 35a1b9a68 ([HUDI-848] Synchronous commits before completion of instants.)
   public static final boolean DEFAULT_METADATA_ENABLE_FOR_READERS = false;
 
   // Enable metrics for internal Metadata Table
@@ -252,16 +242,6 @@ public final class HoodieMetadataConfig extends HoodieConfig {
    */
   @Deprecated
   public static final boolean DEFAULT_METADATA_ENABLE = ENABLE.defaultValue();
-  /**
-   * @deprecated Use {@link #VALIDATE_ENABLE} and its methods.
-   */
-  @Deprecated
-  public static final String METADATA_VALIDATE_PROP = VALIDATE_ENABLE.key();
-  /**
-   * @deprecated Use {@link #VALIDATE_ENABLE} and its methods.
-   */
-  @Deprecated
-  public static final boolean DEFAULT_METADATA_VALIDATE = VALIDATE_ENABLE.defaultValue();
 
   /**
    * @deprecated Use {@link #METRICS_ENABLE} and its methods.

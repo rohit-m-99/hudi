@@ -32,7 +32,6 @@ import org.apache.hudi.common.model.HoodieRecordPayload;
 import org.apache.hudi.common.table.HoodieTableConfig;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.timeline.HoodieActiveTimeline;
-import org.apache.hudi.common.table.timeline.HoodieDefaultTimeline;
 import org.apache.hudi.common.table.timeline.HoodieInstant;
 import org.apache.hudi.common.table.timeline.HoodieTimeline;
 import org.apache.hudi.common.util.HoodieTimer;
@@ -114,10 +113,6 @@ public class HoodieBackedTableMetadata extends BaseTableMetadata {
         this.enabled = false;
         this.metaClient = null;
         this.tableConfig = null;
-      }
-
-      if (enabled) {
-        openTimelineScanner(metaClient.getActiveTimeline());
       }
     }
   }
@@ -317,6 +312,20 @@ public class HoodieBackedTableMetadata extends BaseTableMetadata {
     }
 
     return Option.empty();
+  }
+
+  /**
+   * Return the timestamp of the latest synced instant.
+   */
+  @Override
+  public Option<String> getUpdateTime() {
+    if (!enabled) {
+      return Option.empty();
+    }
+
+    HoodieActiveTimeline timeline = metaClient.reloadActiveTimeline();
+    return timeline.getDeltaCommitTimeline().filterCompletedInstants()
+        .lastInstant().map(HoodieInstant::getTimestamp);
   }
 
   @Override

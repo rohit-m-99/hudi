@@ -94,7 +94,7 @@ public class SparkRDDWriteClient<T extends HoodieRecordPayload> extends
   public SparkRDDWriteClient(HoodieEngineContext context, HoodieWriteConfig writeConfig,
                              Option<EmbeddedTimelineService> timelineService) {
     super(context, writeConfig, timelineService);
-    if (config.useFileListingMetadata()) {
+    if (config.isMetadataTableEnabled()) {
       // If the metadata table does not exist, it should be bootstrapped here
       // TODO: Check if we can remove this requirement - auto bootstrap on commit
       SparkHoodieBackedTableMetadataWriter.create(context.getHadoopConf().get(), config, context);
