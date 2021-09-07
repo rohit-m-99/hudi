@@ -25,6 +25,7 @@ import org.apache.hudi.avro.model.HoodieRollbackMetadata;
 import org.apache.hudi.common.model.FileSlice;
 import org.apache.hudi.common.model.HoodieCommitMetadata;
 import org.apache.hudi.common.model.HoodieRecord;
+import org.apache.hudi.common.model.HoodieReplaceCommitMetadata;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.timeline.HoodieActiveTimeline;
 import org.apache.hudi.common.table.timeline.HoodieDefaultTimeline;
@@ -32,8 +33,10 @@ import org.apache.hudi.common.table.timeline.HoodieInstant;
 import org.apache.hudi.common.table.timeline.HoodieTimeline;
 import org.apache.hudi.common.table.timeline.TimelineMetadataUtils;
 import org.apache.hudi.common.table.view.HoodieTableFileSystemView;
+import org.apache.hudi.common.util.CleanerUtils;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.common.util.ValidationUtils;
+import org.apache.hudi.exception.HoodieException;
 import org.apache.hudi.exception.HoodieMetadataException;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.LogManager;
@@ -58,6 +61,61 @@ import static org.apache.hudi.metadata.HoodieTableMetadata.NON_PARTITIONED_NAME;
 public class HoodieTableMetadataUtil {
 
   private static final Logger LOG = LogManager.getLogger(HoodieTableMetadataUtil.class);
+
+  /**
+   * Converts a timeline instant to metadata table records.
+   *
+   * @param datasetMetaClient The meta client associated with the timeline instant
+   * @param metadataTableTimeline Current timeline of the Metadata Table
+   * @param instant to fetch and convert to metadata table records
+   * @return a list of metadata table records
+   * @throws IOException
+   */
+  public static Option<List<HoodieRecord>> convertInstantToMetaRecords(HoodieTableMetaClient datasetMetaClient,
+                                                                       HoodieActiveTimeline metadataTableTimeline, HoodieInstant instant, Option<String> lastSyncTs) throws IOException {
+    HoodieTimeline timeline = datasetMetaClient.getActiveTimeline();
+    Option<List<HoodieRecord>> records = Option.empty();
+    ValidationUtils.checkArgument(instant.isCompleted(), "Only completed instants can be synced.");
+
+    switch (instant.getAction()) {
+      case HoodieTimeline.CLEAN_ACTION:
+        HoodieCleanMetadata cleanMetadata = CleanerUtils.getCleanerMetadata(datasetMetaClient, instant);
+        records = Option.of(convertMetadataToRecords(cleanMetadata, instant.getTimestamp()));
+        break;
+      case HoodieTimeline.DELTA_COMMIT_ACTION:
+      case HoodieTimeline.COMMIT_ACTION:
+      case HoodieTimeline.COMPACTION_ACTION:
+        HoodieCommitMetadata commitMetadata = HoodieCommitMetadata.fromBytes(
+            timeline.getInstantDetails(instant).get(), HoodieCommitMetadata.class);
+        records = Option.of(convertMetadataToRecords(commitMetadata, instant.getTimestamp()));
+        break;
+      case HoodieTimeline.ROLLBACK_ACTION:
+        // TODO: Fix last arg.
+        HoodieRollbackMetadata rollbackMetadata = TimelineMetadataUtils.deserializeHoodieRollbackMetadata(
+            timeline.getInstantDetails(instant).get());
+        records = Option.of(convertMetadataToRecords(metadataTableTimeline, rollbackMetadata, instant.getTimestamp(), lastSyncTs, false));
+        break;
+      case HoodieTimeline.RESTORE_ACTION:
+        HoodieRestoreMetadata restoreMetadata = TimelineMetadataUtils.deserializeHoodieRestoreMetadata(
+            timeline.getInstantDetails(instant).get());
+        records = Option.of(convertMetadataToRecords(metadataTableTimeline, restoreMetadata, instant.getTimestamp(), lastSyncTs));
+        break;
+      case HoodieTimeline.SAVEPOINT_ACTION:
+        // Nothing to be done here
+        break;
+      case HoodieTimeline.REPLACE_COMMIT_ACTION:
+        HoodieReplaceCommitMetadata replaceMetadata = HoodieReplaceCommitMetadata.fromBytes(
+            timeline.getInstantDetails(instant).get(), HoodieReplaceCommitMetadata.class);
+        // Note: we only add new files created here. Replaced files are removed from metadata later by cleaner.
+        records = Option.of(convertMetadataToRecords(replaceMetadata, instant.getTimestamp()));
+        break;
+      default:
+        throw new HoodieException("Unknown type of action " + instant.getAction());
+    }
+
+    return records;
+  }
+
 
   /**
    * Finds all new files/partitions created as part of commit and creates metadata table records for them.

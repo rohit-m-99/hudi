@@ -26,6 +26,7 @@ import org.apache.hudi.avro.model.HoodieRollbackMetadata;
 import org.apache.hudi.common.engine.HoodieEngineContext;
 import org.apache.hudi.common.fs.FSUtils;
 import org.apache.hudi.common.model.HoodieCommitMetadata;
+import org.apache.hudi.common.model.HoodieReplaceCommitMetadata;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.exception.HoodieMetadataException;
 
@@ -47,6 +48,9 @@ public interface HoodieTableMetadataWriter extends Serializable, AutoCloseable {
 
   // Update the metadata table due to a ROLLBACK operation
   void update(HoodieRollbackMetadata rollbackMetadata, String instantTime);
+
+  // Update the metadata table for replaceCommitMetadata operation
+  void update(HoodieReplaceCommitMetadata replaceCommitMetadata, String instantTime);
 
   /**
    * Return the timestamp of the latest instant synced to the metadata table.

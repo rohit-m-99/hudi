@@ -941,9 +941,12 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload, I
             .scheduleCompaction(context, instantTime, extraMetadata);
         return compactionPlan.isPresent() ? Option.of(instantTime) : Option.empty();
       case CLEAN:
-        LOG.info("Scheduling cleaning at instant time :" + instantTime);
+        LOG.warn("Scheduling cleaning at instant time :" + instantTime);
         Option<HoodieCleanerPlan> cleanerPlan = createTable(config, hadoopConf)
             .scheduleCleaning(context, instantTime, extraMetadata);
+        if (cleanerPlan.isPresent()) {
+          LOG.warn("Cleaner plan available " + cleanerPlan.get().toString());
+        }
         return cleanerPlan.isPresent() ? Option.of(instantTime) : Option.empty();
       default:
         throw new IllegalArgumentException("Invalid TableService " + tableServiceType);

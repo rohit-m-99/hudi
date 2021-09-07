@@ -30,6 +30,7 @@ import org.apache.hudi.client.common.HoodieSparkEngineContext;
 import org.apache.hudi.common.engine.HoodieEngineContext;
 import org.apache.hudi.common.fs.FSUtils;
 import org.apache.hudi.common.model.CompactionOperation;
+import org.apache.hudi.common.model.FileSlice;
 import org.apache.hudi.common.model.HoodieBaseFile;
 import org.apache.hudi.common.model.HoodieFileGroupId;
 import org.apache.hudi.common.model.HoodieKey;
@@ -225,6 +226,15 @@ public class HoodieSparkMergeOnReadTableCompactor<T extends HoodieRecordPayload>
     context.setJobStatus(this.getClass().getSimpleName(), "Looking for files to compact");
 
     List<HoodieCompactionOperation> operations = context.flatMap(partitionPaths, partitionPath -> {
+      List<FileSlice> latestfileSlices = fileSystemView.getLatestFileSlices(partitionPath).collect(toList());
+      LOG.warn("Latest file slices :: " + latestfileSlices.size());
+      for (FileSlice fileSlice : latestfileSlices) {
+        LOG.warn("    FileSlice :: fileID " + fileSlice.getFileId() + ", baseInstant time " + fileSlice.getBaseInstantTime());
+        List<HoodieLogFile> logFiles = fileSlice.getLogFiles().collect(Collectors.toList());
+        LOG.warn("    Total log files : " + logFiles.size());
+        logFiles.forEach(logFile -> LOG.warn("      Log files in this file slice : " + logFile.getFileName() + ", fileId " + logFile.getFileId()));
+      }
+
       return fileSystemView
           .getLatestFileSlices(partitionPath)
           .filter(slice -> !fgIdsInPendingCompactionAndClustering.contains(slice.getFileGroupId()))

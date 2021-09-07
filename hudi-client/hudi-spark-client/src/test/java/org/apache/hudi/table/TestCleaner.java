@@ -74,8 +74,11 @@ import org.apache.hudi.common.util.collection.Pair;
 import org.apache.hudi.config.HoodieCompactionConfig;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieIOException;
+import org.apache.hudi.exception.HoodieMetadataException;
 import org.apache.hudi.index.HoodieIndex;
 import org.apache.hudi.index.SparkHoodieIndex;
+import org.apache.hudi.metadata.HoodieTableMetadataWriter;
+import org.apache.hudi.metadata.SparkHoodieBackedTableMetadataWriter;
 import org.apache.hudi.table.action.clean.CleanPlanner;
 import org.apache.hudi.testutils.HoodieClientTestBase;
 import org.apache.log4j.LogManager;
@@ -594,6 +597,7 @@ public class TestCleaner extends HoodieClientTestBase {
         });
       });
       metaClient.reloadActiveTimeline().revertToInflight(completedCleanInstant);
+
       // retry clean operation again
       writeClient.clean();
       final HoodieCleanMetadata retriedCleanMetadata = CleanerUtils.getCleanerMetadata(HoodieTableMetaClient.reload(metaClient), completedCleanInstant);
@@ -777,22 +781,28 @@ public class TestCleaner extends HoodieClientTestBase {
     HoodieTableMetaClient metaClient = HoodieTestUtils.init(hadoopConf, basePath, HoodieTableType.MERGE_ON_READ);
     HoodieTestTable testTable = HoodieTestTable.of(metaClient);
     String p0 = "2020/01/01";
-
+    testTable = testTable.withPartitionMetaFiles(p0);
     // Make 3 files, one base file and 2 log files associated with base file
     String file1P0 = testTable.addDeltaCommit("000").getFileIdsWithBaseFilesInPartitions(p0).get(p0);
     testTable.forDeltaCommit("000")
             .withLogFile(p0, file1P0, 1)
             .withLogFile(p0, file1P0, 2);
 
+    syncTableMetadata(config);
+
     // Make 2 files, one base file and 1 log files associated with base file
     testTable.addDeltaCommit("001")
             .withBaseFilesInPartition(p0, file1P0)
             .withLogFile(p0, file1P0, 3);
 
+    syncTableMetadata(config);
+
     // Make 2 files, one base file and 1 log files associated with base file
     testTable.addDeltaCommit("002")
             .withBaseFilesInPartition(p0, file1P0)
             .withLogFile(p0, file1P0, 4);
+
+    syncTableMetadata(config);
 
     List<HoodieCleanStat> hoodieCleanStats = runCleaner(config);
     assertEquals(3,
@@ -805,7 +815,16 @@ public class TestCleaner extends HoodieClientTestBase {
     assertTrue(testTable.baseFileExists(p0, "002", file1P0));
     assertTrue(testTable.logFileExists(p0, "002", file1P0, 4));
   }
-  
+
+  public void syncTableMetadata(HoodieWriteConfig writeConfig) {
+    // Open up the metadata table again, for syncing
+    try (HoodieTableMetadataWriter writer = SparkHoodieBackedTableMetadataWriter.create(hadoopConf, writeConfig, context)) {
+      LOG.info("Successfully synced to metadata table");
+    } catch (Exception e) {
+      throw new HoodieMetadataException("Error syncing to metadata table.", e);
+    }
+  }
+
   @Test
   public void testCleanWithReplaceCommits() throws Exception {
     HoodieWriteConfig config = HoodieWriteConfig.newBuilder().withPath(basePath)

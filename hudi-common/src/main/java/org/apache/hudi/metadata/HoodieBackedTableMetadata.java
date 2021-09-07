@@ -117,6 +117,38 @@ public class HoodieBackedTableMetadata extends BaseTableMetadata {
     }
   }
 
+  protected List<HoodieInstant> findInstantsToSyncForWriter() {
+    return findInstantsToSync(false);
+  }
+
+  /**
+   * Return an ordered list of instants which have not been synced to the Metadata Table.
+   */
+  private List<HoodieInstant> findInstantsToSync(boolean ignoreIncompleteInstants) {
+    initIfNeeded();
+
+    // if there are no instants yet, return empty list, since there is nothing to sync here.
+    if (!enabled || !metaClient.getActiveTimeline().filterCompletedInstants().lastInstant().isPresent()) {
+      return Collections.EMPTY_LIST;
+    }
+
+    // All instants on the data timeline, which are greater than the min deltacommit instant on metadata timeline
+    // are candidates for sync. We only consider delta-commit instants as each actions on dataset leads to a
+    // deltacommit on the metadata table. filter those that are already synced to metadata.
+    String minActiveMetadataInstantTime = metaClient.getActiveTimeline().getDeltaCommitTimeline().filterCompletedInstants()
+        .firstInstant().get().getTimestamp();
+    HoodieTimeline candidateTimeline = datasetMetaClient.getActiveTimeline().getAllCommitsTimeline().filterCompletedInstants().findInstantsAfter(minActiveMetadataInstantTime, Integer.MAX_VALUE);
+    List<HoodieInstant> metadataActiveInstants = metaClient.getActiveTimeline().getDeltaCommitTimeline().filterCompletedInstants().getInstants().collect(Collectors.toList());
+    List<HoodieInstant> datasetCompletedInstants = candidateTimeline.getInstants().collect(Collectors.toList());
+    List<HoodieInstant> instantsToSync = new ArrayList<>();
+    for (HoodieInstant hoodieInstant: datasetCompletedInstants) {
+      if (!metadataActiveInstants.contains(hoodieInstant)) {
+        instantsToSync.add(hoodieInstant);
+      }
+    }
+    return instantsToSync;
+  }
+
   @Override
   protected Option<HoodieRecord<HoodieMetadataPayload>> getRecordByKeyFromMetadata(String key, String partitionName) {
     Pair<HoodieFileReader, HoodieMetadataMergedLogRecordScanner> readers;

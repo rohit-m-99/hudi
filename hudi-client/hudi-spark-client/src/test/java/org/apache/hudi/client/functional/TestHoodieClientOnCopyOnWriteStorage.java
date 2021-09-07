@@ -1943,7 +1943,7 @@ public class TestHoodieClientOnCopyOnWriteStorage extends HoodieClientTestBase {
 
     // Delete orphan marker and commit should succeed
     metaClient.getFs().delete(result.getKey(), false);
-    if (!enableOptimisticConsistencyGuard) {
+    if (!enableOptimisticConsistencyGuard && !cfg.isMetadataTableEnabled()) { // creating repeated commits works only if metadata is not enabled.
       assertTrue(client.commit(instantTime, result.getRight()), "Commit should succeed");
       assertTrue(testTable.commitExists(instantTime),
           "After explicit commit, commit file should be created");

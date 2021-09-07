@@ -36,6 +36,7 @@ import org.apache.hudi.common.model.HoodieKey;
 import org.apache.hudi.common.model.HoodieLogFile;
 import org.apache.hudi.common.model.HoodiePartitionMetadata;
 import org.apache.hudi.common.model.HoodieRecord;
+import org.apache.hudi.common.model.HoodieReplaceCommitMetadata;
 import org.apache.hudi.common.model.HoodieTableType;
 import org.apache.hudi.common.model.HoodieWriteStat;
 import org.apache.hudi.common.model.WriteConcurrencyMode;
@@ -123,6 +124,16 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
       initTransactionManager();
       initialize(engineContext);
       initTableMetadata();
+      if (enabled) {
+        // This is always called even in case the table was created for the first time. This is because
+        // initFromFilesystem() does file listing and hence may take a long time during which some new updates
+        // may have occurred on the table. Hence, calling this always ensures that the metadata is brought in sync
+        // with the active timeline.
+        // HoodieTimer timer = new HoodieTimer().startTimer();
+        syncFromInstants(datasetMetaClient);
+        // TODO: fix me.
+        // metrics.ifPresent(m -> m.updateMetrics(HoodieMetadataMetrics.SYNC_STR, timer.endTimer()));
+      }
     } else {
       enabled = false;
       this.metrics = Option.empty();
@@ -462,6 +473,39 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
   }
 
   /**
+   * Sync the Metadata Table from the instants created on the dataset.
+   *
+   * @param datasetMetaClient {@code HoodieTableMetaClient} for the dataset
+   */
+  private void syncFromInstants(HoodieTableMetaClient datasetMetaClient) {
+    /*ValidationUtils.checkState(enabled, "Metadata table cannot be synced as it is not enabled");
+    // (re) init the metadata for reading.
+    // initTableMetadata();
+    try {
+      List<HoodieInstant> instantsToSync = metadata.findInstantsToSyncForWriter();
+      if (instantsToSync.isEmpty()) {
+        return;
+      }
+
+      LOG.info("Syncing " + instantsToSync.size() + " instants to metadata table: " + instantsToSync);
+
+      // Read each instant in order and sync it to metadata table
+      for (HoodieInstant instant : instantsToSync) {
+        LOG.info("Syncing instant " + instant + " to metadata table");
+
+        Option<List<HoodieRecord>> records = HoodieTableMetadataUtil.convertInstantToMetaRecords(datasetMetaClient,
+            metaClient.getActiveTimeline(), instant, metadata.getUpdateTime());
+        if (records.isPresent()) {
+          commit(records.get(), MetadataPartitionType.FILES.partitionPath(), instant.getTimestamp());
+        }
+      }
+      initTableMetadata();
+    } catch (IOException ioe) {
+      throw new HoodieIOException("Unable to sync instants from data to metadata table.", ioe);
+    }*/
+  }
+
+  /**
    * Update from {@code HoodieCommitMetadata}.
    *
    * @param commitMetadata {@code HoodieCommitMetadata}
@@ -470,10 +514,27 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
   @Override
   public void update(HoodieCommitMetadata commitMetadata, String instantTime) {
     if (enabled) {
+      LOG.warn("TEST_LOG. Updating commit MD : " + instantTime + ", " + commitMetadata.getCompacted());
       this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, HoodieTimeline.DELTA_COMMIT_ACTION, instantTime)),
           Option.empty());
       try {
         List<HoodieRecord> records = HoodieTableMetadataUtil.convertMetadataToRecords(commitMetadata, instantTime);
+        commit(records, MetadataPartitionType.FILES.partitionPath(), instantTime);
+      } finally {
+        this.txnManager.endTransaction();
+      }
+    }
+  }
+
+  @Override
+  public void update(HoodieReplaceCommitMetadata replaceCommitMetadata, String instantTime) {
+    LOG.warn("TEST_LOG. Updating ReplaceCommitMetadata to metadata table for " + instantTime);
+    if (enabled) {
+      LOG.warn("TEST_LOG. Updating replace commit MD : " + instantTime + ", " + replaceCommitMetadata.getCompacted());
+      this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, HoodieTimeline.DELTA_COMMIT_ACTION, instantTime)),
+          Option.empty());
+      try {
+        List<HoodieRecord> records = HoodieTableMetadataUtil.convertMetadataToRecords(replaceCommitMetadata, instantTime);
         commit(records, MetadataPartitionType.FILES.partitionPath(), instantTime);
       } finally {
         this.txnManager.endTransaction();
@@ -490,6 +551,7 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
   @Override
   public void update(HoodieCleanMetadata cleanMetadata, String instantTime) {
     if (enabled) {
+      LOG.warn("TEST_LOG. Updating cleanMD : " + instantTime + ", " + cleanMetadata.getEarliestCommitToRetain());
       this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, HoodieTimeline.DELTA_COMMIT_ACTION, instantTime)),
           Option.empty());
       try {
@@ -510,6 +572,7 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
   @Override
   public void update(HoodieRestoreMetadata restoreMetadata, String instantTime) {
     if (enabled) {
+      LOG.warn("TEST_LOG. Updatting restore metadata " + instantTime + ", " + restoreMetadata.getStartRestoreTime());
       this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, HoodieTimeline.DELTA_COMMIT_ACTION, instantTime)),
           Option.empty());
       try {
@@ -531,6 +594,7 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
   @Override
   public void update(HoodieRollbackMetadata rollbackMetadata, String instantTime) {
     if (enabled) {
+      LOG.warn("TEST_LOG. Updating rollback MD : " + instantTime + ", commits to rollback " + Arrays.toString(rollbackMetadata.getCommitsRollback().toArray()));
       this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, HoodieTimeline.DELTA_COMMIT_ACTION, instantTime)),
           Option.empty());
       try {

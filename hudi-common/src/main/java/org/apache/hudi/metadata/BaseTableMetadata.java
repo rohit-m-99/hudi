@@ -67,6 +67,7 @@ public abstract class BaseTableMetadata implements HoodieTableMetadata {
     this.hadoopConf = new SerializableConfiguration(engineContext.getHadoopConf());
     this.datasetBasePath = datasetBasePath;
     this.datasetMetaClient = HoodieTableMetaClient.builder().setConf(hadoopConf.get()).setBasePath(datasetBasePath).build();
+    // this.datasetMetaClient.reloadActiveTimeline();
     this.spillableMapDirectory = spillableMapDirectory;
     this.metadataConfig = metadataConfig;
 
