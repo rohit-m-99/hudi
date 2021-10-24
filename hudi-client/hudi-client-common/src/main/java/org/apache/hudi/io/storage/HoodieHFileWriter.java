@@ -30,7 +30,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -41,6 +40,7 @@ import org.apache.hadoop.io.Writable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -85,12 +85,12 @@ public class HoodieHFileWriter<T extends HoodieRecordPayload, R extends IndexedR
     this.taskContextSupplier = taskContextSupplier;
 
     HFileContext context = new HFileContextBuilder().withBlockSize(hfileConfig.getBlockSize())
-          .withCompression(hfileConfig.getCompressionAlgorithm())
+          //.withCompression(hfileConfig.getCompressionAlgorithm())
           .build();
 
-    conf.set(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, String.valueOf(hfileConfig.shouldPrefetchBlocksOnOpen()));
+    /*conf.set(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, String.valueOf(hfileConfig.shouldPrefetchBlocksOnOpen()));
     conf.set(HColumnDescriptor.CACHE_DATA_IN_L1, String.valueOf(hfileConfig.shouldCacheDataInL1()));
-    conf.set(DROP_BEHIND_CACHE_COMPACTION_KEY, String.valueOf(hfileConfig.shouldDropBehindCacheCompaction()));
+    conf.set(DROP_BEHIND_CACHE_COMPACTION_KEY, String.valueOf(hfileConfig.shouldDropBehindCacheCompaction()));*/
     CacheConfig cacheConfig = new CacheConfig(conf);
     this.writer = HFile.getWriterFactory(conf, cacheConfig).withPath(this.fs, this.file).withFileContext(context).create();
 
@@ -112,16 +112,22 @@ public class HoodieHFileWriter<T extends HoodieRecordPayload, R extends IndexedR
   @Override
   public void writeAvro(String recordKey, IndexedRecord object) throws IOException {
     byte[] value = HoodieAvroUtils.avroToBytes((GenericRecord)object);
-    KeyValue kv = new KeyValue(recordKey.getBytes(), null, null, value);
+    KeyValue kv = new KeyValue(recordKey.getBytes(StandardCharsets.UTF_8), null, null, value);
     writer.append(kv);
 
-    if (hfileConfig.useBloomFilter()) {
+    /*if (hfileConfig.useBloomFilter()) {
       hfileConfig.getBloomFilter().add(recordKey);
       if (minRecordKey == null) {
         minRecordKey = recordKey;
       }
       maxRecordKey = recordKey;
-    }
+    }*/
+  }
+
+  public void writeAvro(byte[] recordKeys, IndexedRecord object) throws IOException {
+    byte[] value = HoodieAvroUtils.avroToBytes((GenericRecord)object);
+    KeyValue kv = new KeyValue(recordKeys, null, null, value);
+    writer.append(kv);
   }
 
   @Override

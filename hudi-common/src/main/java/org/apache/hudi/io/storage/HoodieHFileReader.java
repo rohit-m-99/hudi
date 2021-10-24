@@ -18,17 +18,13 @@
 
 package org.apache.hudi.io.storage;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.apache.hudi.avro.HoodieAvroUtils;
+import org.apache.hudi.common.bloom.BloomFilter;
+import org.apache.hudi.common.bloom.BloomFilterFactory;
+import org.apache.hudi.common.fs.FSUtils;
+import org.apache.hudi.common.util.Option;
+import org.apache.hudi.exception.HoodieException;
+import org.apache.hudi.exception.HoodieIOException;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
@@ -44,14 +40,20 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hudi.avro.HoodieAvroUtils;
-import org.apache.hudi.common.bloom.BloomFilter;
-import org.apache.hudi.common.bloom.BloomFilterFactory;
-import org.apache.hudi.common.fs.FSUtils;
-import org.apache.hudi.common.util.Option;
-import org.apache.hudi.exception.HoodieException;
-import org.apache.hudi.exception.HoodieIOException;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class HoodieHFileReader<R extends IndexedRecord> implements HoodieFileReader {
   private Path path;
@@ -95,7 +97,7 @@ public class HoodieHFileReader<R extends IndexedRecord> implements HoodieFileRea
   public String[] readMinMaxRecordKeys() {
     try {
       Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
-      return new String[] { new String(fileInfo.get(KEY_MIN_RECORD.getBytes())),
+      return new String[] {new String(fileInfo.get(KEY_MIN_RECORD.getBytes())),
           new String(fileInfo.get(KEY_MAX_RECORD.getBytes()))};
     } catch (IOException e) {
       throw new HoodieException("Could not read min/max record key out of file information block correctly from path", e);
@@ -184,7 +186,7 @@ public class HoodieHFileReader<R extends IndexedRecord> implements HoodieFileRea
     this.schema = schema;
     reader.loadFileInfo();
     List<Pair<String, R>> records = new ArrayList<>();
-    for (String key: keys) {
+    for (String key : keys) {
       Option<R> value = getRecordByKey(key, schema);
       if (value.isPresent()) {
         records.add(new Pair(key, value.get()));
@@ -206,7 +208,7 @@ public class HoodieHFileReader<R extends IndexedRecord> implements HoodieFileRea
           // To handle when hasNext() is called multiple times for idempotency and/or the first time
           if (this.next == null && !this.eof) {
             if (!scanner.isSeeked() && scanner.seekTo()) {
-                this.next = getRecordFromCell(scanner.getKeyValue(), getSchema(), readerSchema);
+              this.next = getRecordFromCell(scanner.getKeyValue(), getSchema(), readerSchema);
             }
           }
           return this.next != null;
@@ -257,16 +259,43 @@ public class HoodieHFileReader<R extends IndexedRecord> implements HoodieFileRea
     }
 
     if (value != null) {
-      R record = (R)HoodieAvroUtils.bytesToAvro(value, getSchema(), readerSchema);
+      R record = (R) HoodieAvroUtils.bytesToAvro(value, getSchema(), readerSchema);
       return Option.of(record);
     }
 
     return Option.empty();
   }
 
+  public List<Option<R>> getRecordsByKeyPrefix(String key, Schema readerSchema) throws IOException {
+    List<Option<R>> toReturn = new ArrayList<>();
+    KeyValue kv = new KeyValue(key.getBytes(), null, null, null);
+    if (keyScanner == null) {
+      keyScanner = reader.getScanner(false, true);
+    }
+    int pos = keyScanner.seekTo(kv);
+    if (pos == 1) {
+      while (keyScanner.next()) {
+        Cell keyValue = keyScanner.getKeyValue();
+        byte[] keys = Arrays.copyOfRange(keyValue.getRowArray(), keyValue.getRowOffset(), keyValue.getRowOffset() + keyValue.getRowLength());
+        String rowKey = Bytes.toString(keys);
+        System.out.println("Keys being parsed " + rowKey);
+        if (rowKey.startsWith(key)) {
+          byte[] value = Arrays.copyOfRange(keyValue.getValueArray(), keyValue.getValueOffset(), keyValue.getValueOffset() + keyValue.getValueLength());
+          R record = (R) HoodieAvroUtils.bytesToAvro(value, getSchema(), readerSchema);
+          toReturn.add(Option.of(record));
+        } else {
+          System.out.println("Skipping :::: " + rowKey);
+          break;
+        }
+      }
+    }
+    System.out.println("Total entries " + toReturn.size());
+    return toReturn;
+  }
+
   private R getRecordFromCell(Cell c, Schema writerSchema, Schema readerSchema) throws IOException {
     byte[] value = Arrays.copyOfRange(c.getValueArray(), c.getValueOffset(), c.getValueOffset() + c.getValueLength());
-    return (R)HoodieAvroUtils.bytesToAvro(value, writerSchema, readerSchema);
+    return (R) HoodieAvroUtils.bytesToAvro(value, writerSchema, readerSchema);
   }
 
   @Override

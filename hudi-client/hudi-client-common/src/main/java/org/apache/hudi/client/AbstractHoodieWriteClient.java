@@ -185,6 +185,9 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload, I
     HoodieCommitMetadata metadata = CommitUtils.buildMetadata(stats, partitionToReplaceFileIds,
         extraMetadata, operationType, config.getWriteSchema(), commitActionType);
     HeartbeatUtils.abortIfHeartbeatExpired(instantTime, table, heartbeatClient, config);
+    if (!config.getBasePath().endsWith("metadata")) {
+      LOG.warn("AHWC. commit stats " + instantTime + " starting +++++++ ");
+    }
     this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, table.getMetaClient().getCommitActionType(), instantTime)),
         lastCompletedTxnAndMetadata.isPresent() ? Option.of(lastCompletedTxnAndMetadata.get().getLeft()) : Option.empty());
     try {
@@ -197,6 +200,9 @@ public abstract class AbstractHoodieWriteClient<T extends HoodieRecordPayload, I
       throw new HoodieCommitException("Failed to complete commit " + config.getBasePath() + " at time " + instantTime, e);
     } finally {
       this.txnManager.endTransaction();
+      if (!config.getBasePath().endsWith("metadata")) {
+        LOG.warn("AHWC. commit stats " + instantTime + " complete ------- ");
+      }
     }
     // do this outside of lock since compaction, clustering can be time taking and we don't need a lock for the entire execution period
     runTableServicesInline(table, metadata, extraMetadata);

@@ -266,10 +266,12 @@ public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, 
    */
   private void writeToMetadata(HoodieRollbackMetadata rollbackMetadata) {
     try {
+      LOG.warn("rollback " + instantTime + " starting +++++++ ");
       this.txnManager.beginTransaction(Option.empty(), Option.empty());
       writeTableMetadata(rollbackMetadata);
     } finally {
       this.txnManager.endTransaction();
+      LOG.warn("rollback " + instantTime + " complete ------- ");
     }
   }
 

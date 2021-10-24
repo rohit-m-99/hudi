@@ -402,12 +402,14 @@ public class SparkRDDWriteClient<T extends HoodieRecordPayload> extends
   private void writeTableMetadata(HoodieTable<T, JavaRDD<HoodieRecord<T>>, JavaRDD<HoodieKey>, JavaRDD<WriteStatus>> table, HoodieCommitMetadata commitMetadata,
                                   HoodieInstant hoodieInstant) {
     try {
+      LOG.warn("SparkRDDWriteClient " + hoodieInstant.getTimestamp() + " starting +++++++ ");
       this.txnManager.beginTransaction(Option.of(hoodieInstant), Option.empty());
       // Do not do any conflict resolution here as we do with regular writes. We take the lock here to ensure all writes to metadata table happens within a
       // single lock (single writer). Because more than one write to metadata table will result in conflicts since all of them updates the same partition.
       table.getMetadataWriter().ifPresent(w -> w.update(commitMetadata, hoodieInstant.getTimestamp()));
     } finally {
       this.txnManager.endTransaction();
+      LOG.warn("SparkRDDWriteClient " + hoodieInstant.getTimestamp() + " complete ------- ");
     }
   }
 

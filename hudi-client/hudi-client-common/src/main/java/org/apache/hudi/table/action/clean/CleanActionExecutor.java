@@ -215,10 +215,16 @@ public class CleanActionExecutor<T extends HoodieRecordPayload, I, K, O> extends
    */
   private void writeMetadata(HoodieCleanMetadata cleanMetadata) {
     try {
+      if (!config.getBasePath().endsWith("metadata")) {
+        LOG.warn("Clean AE " + instantTime + " starting +++++++ ");
+      }
       this.txnManager.beginTransaction(Option.empty(), Option.empty());
       writeTableMetadata(cleanMetadata);
     } finally {
       this.txnManager.endTransaction();
+      if (!config.getBasePath().endsWith("metadata")) {
+        LOG.warn("Clean AE " + instantTime + "complete --------");
+      }
     }
   }
 

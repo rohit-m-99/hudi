@@ -147,6 +147,9 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload, I,
   }
 
   protected void autoCommit(Option<Map<String, String>> extraMetadata, HoodieWriteMetadata<O> result) {
+    if (!config.getBasePath().endsWith("metadata")) {
+      LOG.warn("Base SCAE " + instantTime + " starting +++++++ ");
+    }
     this.txnManager.beginTransaction(Option.of(new HoodieInstant(State.INFLIGHT, HoodieTimeline.COMMIT_ACTION, instantTime)),
         lastCompletedTxn.isPresent() ? Option.of(lastCompletedTxn.get().getLeft()) : Option.empty());
     try {
@@ -155,6 +158,9 @@ public abstract class BaseCommitActionExecutor<T extends HoodieRecordPayload, I,
       commit(extraMetadata, result);
     } finally {
       this.txnManager.endTransaction();
+      if (!config.getBasePath().endsWith("metadata")) {
+        LOG.warn("Base SCAE " + instantTime + " complete -------");
+      }
     }
   }
 

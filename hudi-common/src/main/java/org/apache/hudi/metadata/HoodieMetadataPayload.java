@@ -161,7 +161,6 @@ public class HoodieMetadataPayload implements HoodieRecordPayload<HoodieMetadata
     if (key == null) {
       return Option.empty();
     }
-
     HoodieMetadataRecord record = new HoodieMetadataRecord(key, type, filesystemMetadata);
     return Option.of(record);
   }
