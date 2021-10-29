@@ -23,6 +23,8 @@ import org.apache.hudi.common.config.SerializableConfiguration;
 import org.apache.hudi.common.engine.HoodieEngineContext;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.util.Option;
+import org.apache.hudi.common.util.collection.Pair;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  * Interface that supports querying various pieces of metadata about a hudi table.
@@ -102,6 +105,10 @@ public interface HoodieTableMetadata extends Serializable, AutoCloseable {
    * Fetch all files for given partition paths.
    */
   Map<String, FileStatus[]> getAllFilesInPartitions(List<String> partitionPaths) throws IOException;
+
+  /*Map<String, FileStatus[]> getMatchingFiles(List<Pair<String, Predicate>> columnPredicates);
+
+  Map<Pair<String,String>, MinMaxValues> getMinMaxValuesForRecordKeys(List<String> partitionPaths);*/
 
   /**
    * Get the instant time to which the metadata is synced w.r.t data timeline.

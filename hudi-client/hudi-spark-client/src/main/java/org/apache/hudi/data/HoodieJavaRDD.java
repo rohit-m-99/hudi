@@ -95,4 +95,11 @@ public class HoodieJavaRDD<T> extends HoodieData<T> {
   public List<T> collectAsList() {
     return rddData.collect();
   }
+
+  @Override
+  public <T> HoodieData<T> union(HoodieData<T> secondHoodieData) {
+    //JavaRDD<T> secondJavaRDD = ((HoodieJavaRDD<T>)(secondHoodieData)).get();
+    //return  HoodieJavaRDD.of(rddData.union(secondJavaRDD));
+    return null;
+  }
 }

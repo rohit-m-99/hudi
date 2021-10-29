@@ -76,8 +76,8 @@ public class FlinkHoodieBackedTableMetadataWriter extends HoodieBackedTableMetad
     }
   }
 
-  @Override
-  protected void commit(List<HoodieRecord> records, String partitionName, String instantTime) {
+  //@Override
+  private void commit(List<HoodieRecord> records, String partitionName, String instantTime) {
     ValidationUtils.checkState(enabled, "Metadata table cannot be committed to as it is not enabled");
     List<HoodieRecord> recordList = prepRecords(records, partitionName, 1);
 

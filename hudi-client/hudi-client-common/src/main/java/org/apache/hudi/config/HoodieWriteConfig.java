@@ -1679,6 +1679,10 @@ public class HoodieWriteConfig extends HoodieConfig {
     return metadataConfig.enabled();
   }
 
+  public boolean isMetadataTableColumnStatsPartitionEnabled() {
+    return metadataConfig.isColumnStatsPartitionEnabled();
+  }
+
   public int getMetadataInsertParallelism() {
     return getInt(HoodieMetadataConfig.INSERT_PARALLELISM_VALUE);
   }

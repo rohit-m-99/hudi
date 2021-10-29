@@ -463,9 +463,11 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
    * Test several table operations with restore. This test uses SparkRDDWriteClient.
    * Once the restore support is ready in HoodieTestTable, then rewrite this test.
    */
-  @ParameterizedTest
-  @EnumSource(HoodieTableType.class)
-  public void testTableOperationsWithRestore(HoodieTableType tableType) throws Exception {
+  //@ParameterizedTest
+  //@EnumSource(HoodieTableType.class)
+  @Test
+  public void testTableOperationsWithRestore() throws Exception {
+    HoodieTableType tableType = COPY_ON_WRITE;
     init(tableType);
     HoodieSparkEngineContext engineContext = new HoodieSparkEngineContext(jsc);
 
@@ -505,8 +507,14 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
       assertNoWriteErrors(writeStatuses);
       validateMetadata(client);
 
+      // Clean
+      newCommitTime = "0000009";
+      client.clean(newCommitTime);
+      validateMetadata(client);
+
+
       // Compaction
-      if (metaClient.getTableType() == HoodieTableType.MERGE_ON_READ) {
+      /*if (metaClient.getTableType() == HoodieTableType.MERGE_ON_READ) {
         newCommitTime = "0000005";
         client.scheduleCompactionAtInstant(newCommitTime, Option.empty());
         client.compact(newCommitTime);
@@ -544,7 +552,7 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
 
       // Restore
       client.restoreToInstant("0000006");
-      validateMetadata(client);
+      validateMetadata(client);*/
     }
   }
 

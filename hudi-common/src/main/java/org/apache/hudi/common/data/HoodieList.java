@@ -22,6 +22,7 @@ package org.apache.hudi.common.data;
 import org.apache.hudi.common.function.SerializableFunction;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
@@ -90,5 +91,14 @@ public class HoodieList<T> extends HoodieData<T> {
   @Override
   public List<T> collectAsList() {
     return listData;
+  }
+
+  @Override
+  public <T> HoodieData<T> union(HoodieData<T> secondHoodieData) {
+    List<T> union = new ArrayList<>();
+    union.addAll((Collection<? extends T>) listData);
+    union.addAll(((HoodieList<T>)secondHoodieData).get());
+    return HoodieList.of(union);
+    //return  HoodieJavaRDD.of(rddData.union(((HoodieList<T>)(secondHoodieData)).get()));
   }
 }

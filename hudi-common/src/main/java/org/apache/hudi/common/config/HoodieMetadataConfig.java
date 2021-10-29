@@ -47,6 +47,12 @@ public final class HoodieMetadataConfig extends HoodieConfig {
 
   public static final boolean DEFAULT_METADATA_ENABLE_FOR_READERS = false;
 
+  public static final ConfigProperty<Boolean> ENABLE_COL_STATS = ConfigProperty
+      .key(METADATA_PREFIX + ".enable.column.stats")
+      .defaultValue(true)
+      .sinceVersion("0.10.0")
+      .withDocumentation("Enables the column stats partition in metadata table");
+
   // Enable metrics for internal Metadata Table
   public static final ConfigProperty<Boolean> METRICS_ENABLE = ConfigProperty
       .key(METADATA_PREFIX + ".metrics.enable")
@@ -135,6 +141,10 @@ public final class HoodieMetadataConfig extends HoodieConfig {
     return getBoolean(ENABLE);
   }
 
+  public boolean isColumnStatsPartitionEnabled() {
+    return getBoolean(ENABLE_COL_STATS);
+  }
+
   public boolean enableMetrics() {
     return getBoolean(METRICS_ENABLE);
   }
@@ -161,6 +171,11 @@ public final class HoodieMetadataConfig extends HoodieConfig {
 
     public Builder enable(boolean enable) {
       metadataConfig.setValue(ENABLE, String.valueOf(enable));
+      return this;
+    }
+
+    public Builder enableColumnStatsPartition(boolean enable) {
+      metadataConfig.setValue(ENABLE_COL_STATS, String.valueOf(enable));
       return this;
     }
 

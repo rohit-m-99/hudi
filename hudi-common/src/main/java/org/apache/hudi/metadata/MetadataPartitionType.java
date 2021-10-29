@@ -22,7 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public enum MetadataPartitionType {
-  FILES("files", "files-");
+  FILES("files", "files-"),
+  COLUMN_STATS("column_stats", "col-stats-");
 
   // refers to partition path in metadata table.
   private final String partitionPath;
