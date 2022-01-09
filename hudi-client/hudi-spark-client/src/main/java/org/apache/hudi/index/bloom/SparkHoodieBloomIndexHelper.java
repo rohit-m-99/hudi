@@ -72,6 +72,11 @@ public class SparkHoodieBloomIndexHelper extends BaseHoodieBloomIndexHelper {
             .map(pair -> new Tuple2<>(pair.getLeft(), pair.getRight()));
     Map<String, Long> comparisonsPerFileGroup = computeComparisonsPerFileGroup(
         config, recordsPerPartition, partitionToFileInfo, fileComparisonsRDD, context);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("XXX Comparisons per file group ");
+      comparisonsPerFileGroup.forEach((k,v) ->
+          LOG.info("  XXX " + k + " -> " + v));
+    }
     int inputParallelism =
         HoodieJavaPairRDD.getJavaPairRDD(partitionRecordKeyPairs).partitions().size();
     int joinParallelism = Math.max(inputParallelism, config.getBloomIndexParallelism());

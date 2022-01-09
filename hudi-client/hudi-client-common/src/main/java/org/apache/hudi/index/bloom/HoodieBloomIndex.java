@@ -121,6 +121,16 @@ public class HoodieBloomIndex<T extends HoodieRecordPayload<T>>
     final Map<String, List<BloomIndexFileInfo>> partitionToFileInfo =
         fileInfoList.stream().collect(groupingBy(Pair::getLeft, mapping(Pair::getRight, toList())));
 
+    if (LOG.isInfoEnabled()) {
+      LOG.info("XXX. After loading files for partitions ");
+      for (Map.Entry<String, List<BloomIndexFileInfo>> entry: partitionToFileInfo.entrySet()) {
+        LOG.info(" XXX For partition " + entry.getKey());
+        for (BloomIndexFileInfo fileInfo: entry.getValue()) {
+          LOG.info("    XXX " + fileInfo.toString());
+        }
+      }
+    }
+
     // Step 3: Obtain a HoodieData, for each incoming record, that already exists, with the file id,
     // that contains it.
     HoodieData<ImmutablePair<String, HoodieKey>> fileComparisonPairs =

@@ -88,7 +88,7 @@ public class BucketizedBloomCheckPartitioner extends Partitioner {
     // of buckets and assigns buckets in the same order as file groups. If we were to simply round robin, then buckets
     // for a file group is more or less guaranteed to be placed on different partitions all the time.
     int minBucketsPerPartition = Math.max((int) Math.floor((1.0 * totalBuckets) / partitions), 1);
-    LOG.info(String.format("TotalBuckets %d, min_buckets/partition %d", totalBuckets, minBucketsPerPartition));
+    LOG.info(String.format("TotalBuckets %d, min_buckets/partition %d, total partitions %d", totalBuckets, minBucketsPerPartition, partitions));
     int[] bucketsFilled = new int[partitions];
     Map<String, AtomicInteger> bucketsFilledPerFileGroup = new HashMap<>();
     int partitionIndex = 0;
@@ -125,13 +125,13 @@ public class BucketizedBloomCheckPartitioner extends Partitioner {
       }
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Partitions assigned per file groups :" + fileGroupToPartitions);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("XXX Partitions assigned per file groups :" + fileGroupToPartitions);
       StringBuilder str = new StringBuilder();
       for (int i = 0; i < bucketsFilled.length; i++) {
         str.append("p" + i + " : " + bucketsFilled[i] + ",");
       }
-      LOG.debug("Num buckets assigned per file group :" + str);
+      LOG.info("  XXX Num buckets assigned per file group :" + str);
     }
   }
 
