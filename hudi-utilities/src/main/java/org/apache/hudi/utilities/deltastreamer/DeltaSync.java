@@ -306,6 +306,14 @@ public class DeltaSync implements Serializable {
         }
       }
 
+      // complete the pending clustering before writing to sink
+      if (cfg.retryLastPendingInlineClusteringJob && getHoodieClientConfig(this.schemaProvider).inlineClusteringEnabled()) {
+        Option<String> pendingClusteringInstant = getLastPendingClusteringInstant(commitTimelineOpt);
+        if (pendingClusteringInstant.isPresent()) {
+          writeClient.cluster(pendingClusteringInstant.get(), true);
+        }
+      }
+
       result = writeToSink(srcRecordsWithCkpt.getRight().getRight(),
           srcRecordsWithCkpt.getRight().getLeft(), metrics, overallTimerContext);
     }
@@ -315,6 +323,14 @@ public class DeltaSync implements Serializable {
     // Clear persistent RDDs
     jssc.getPersistentRDDs().values().forEach(JavaRDD::unpersist);
     return result;
+  }
+
+  private Option<String> getLastPendingClusteringInstant(Option<HoodieTimeline> commitTimelineOpt) {
+    if (commitTimelineOpt.isPresent()) {
+      Option<HoodieInstant> pendingClusteringInstant = commitTimelineOpt.get().filterPendingReplaceTimeline().lastInstant();
+      return pendingClusteringInstant.isPresent() ? Option.of(pendingClusteringInstant.get().getTimestamp()) : Option.empty();
+    }
+    return Option.empty();
   }
 
   /**
