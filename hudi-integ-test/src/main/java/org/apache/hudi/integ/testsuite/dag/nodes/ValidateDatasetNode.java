@@ -48,7 +48,7 @@ public class ValidateDatasetNode extends BaseValidateDatasetNode {
   @Override
   public Dataset<Row> getDatasetToValidate(SparkSession session, ExecutionContext context,
                                            StructType inputSchema) {
-    String hudiPath = context.getHoodieTestSuiteWriter().getCfg().targetBasePath + "/*/*/*";
+    String hudiPath = context.getHoodieTestSuiteWriter().getCfg().targetBasePath + "/*";
     log.info("Validate data in target hudi path " + hudiPath);
     Dataset<Row> hudiDf = session.read().option(HoodieMetadataConfig.ENABLE.key(), String.valueOf(config.isEnableMetadataValidate()))
         .format("hudi").load(hudiPath);

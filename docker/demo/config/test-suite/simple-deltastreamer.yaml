@@ -52,7 +52,7 @@ dag_content:
       num_partitions_insert: 1
       num_records_insert: 300
       repeat_count: 1
-      num_records_upsert: 100
+      num_records_upsert: 200
       num_partitions_upsert: 1
     type: UpsertNode
     deps: first_validate

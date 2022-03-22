@@ -20,7 +20,7 @@ dag_content:
   first_insert:
     config:
       record_size: 200
-      num_partitions_insert: 50
+      num_partitions_insert: 1
       repeat_count: 1
       num_records_insert: 10000
     type: SparkInsertNode
@@ -33,16 +33,16 @@ dag_content:
   first_upsert:
     config:
       record_size: 200
-      num_partitions_insert: 50
+      num_partitions_insert: 1
       num_records_insert: 300
       repeat_count: 1
       num_records_upsert: 3000
-      num_partitions_upsert: 50
+      num_partitions_upsert: 1
     type: SparkUpsertNode
     deps: first_validate
   first_delete:
     config:
-      num_partitions_delete: 50
+      num_partitions_delete: 1
       num_records_delete: 8000
     type: SparkDeleteNode
     deps: first_upsert
