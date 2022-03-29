@@ -19,6 +19,7 @@
 package org.apache.hudi.integ.testsuite.dag.scheduler;
 
 import org.apache.hudi.exception.HoodieException;
+import org.apache.hudi.integ.testsuite.ExecuteShellComand;
 import org.apache.hudi.integ.testsuite.dag.ExecutionContext;
 import org.apache.hudi.integ.testsuite.dag.WorkflowDag;
 import org.apache.hudi.integ.testsuite.dag.WriterContext;
@@ -137,6 +138,7 @@ public class DagScheduler {
       int repeatCount = node.getConfig().getRepeatCount();
       while (repeatCount > 0) {
         node.execute(executionContext, curRound);
+        log.warn("Total open files : " + ExecuteShellComand.executeCommand());
         log.info("Finished executing {}", node.getName());
         repeatCount--;
       }
