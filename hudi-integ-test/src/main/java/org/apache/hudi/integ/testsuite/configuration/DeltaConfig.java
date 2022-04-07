@@ -154,7 +154,7 @@ public class DeltaConfig implements Serializable {
     }
 
     public boolean isEnableMetadataValidate() {
-      return Boolean.valueOf(configsMap.getOrDefault(ENABLE_METADATA_VALIDATE, false).toString());
+      return Boolean.valueOf(configsMap.getOrDefault(ENABLE_METADATA_VALIDATE, true).toString());
     }
 
     public int getNumInsertPartitions() {
