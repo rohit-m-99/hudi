@@ -50,6 +50,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static org.apache.hudi.common.util.FileIOUtils.killJVMIfDesired;
+
 public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, I, K, O> extends BaseActionExecutor<T, I, K, O, HoodieRollbackMetadata> {
 
   private static final Logger LOG = LogManager.getLogger(BaseRollbackActionExecutor.class);
@@ -75,14 +77,14 @@ public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, 
   }
 
   public BaseRollbackActionExecutor(HoodieEngineContext context,
-      HoodieWriteConfig config,
-      HoodieTable<T, I, K, O> table,
-      String instantTime,
-      HoodieInstant instantToRollback,
-      boolean deleteInstants,
-      boolean skipTimelinePublish,
-      boolean useMarkerBasedStrategy,
-      boolean skipLocking) {
+                                    HoodieWriteConfig config,
+                                    HoodieTable<T, I, K, O> table,
+                                    String instantTime,
+                                    HoodieInstant instantToRollback,
+                                    boolean deleteInstants,
+                                    boolean skipTimelinePublish,
+                                    boolean useMarkerBasedStrategy,
+                                    boolean skipLocking) {
     super(context, config, table, instantTime);
     this.instantToRollback = instantToRollback;
     this.resolvedInstant = instantToRollback;
@@ -99,6 +101,7 @@ public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, 
 
   /**
    * Execute actual rollback and fetch list of RollbackStats.
+   *
    * @param hoodieRollbackPlan instance of {@link HoodieRollbackPlan} that needs to be executed.
    * @return a list of {@link HoodieRollbackStat}s.
    * @throws IOException
@@ -191,8 +194,7 @@ public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, 
           return true;
         }
         return !ClusteringUtils.isPendingClusteringInstant(table.getMetaClient(), instant);
-      }).map(HoodieInstant::getTimestamp)
-          .collect(Collectors.toList());
+      }).map(HoodieInstant::getTimestamp).collect(Collectors.toList());
       if ((instantTimeToRollback != null) && !inflights.isEmpty()
           && (inflights.indexOf(instantTimeToRollback) != inflights.size() - 1)) {
         throw new HoodieRollbackException(
@@ -234,8 +236,9 @@ public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, 
 
   /**
    * Execute rollback and fetch rollback stats.
+   *
    * @param instantToRollback instant to be rolled back.
-   * @param rollbackPlan instance of {@link HoodieRollbackPlan} for which rollback needs to be executed.
+   * @param rollbackPlan      instance of {@link HoodieRollbackPlan} for which rollback needs to be executed.
    * @return list of {@link HoodieRollbackStat}s.
    */
   protected List<HoodieRollbackStat> executeRollback(HoodieInstant instantToRollback, HoodieRollbackPlan rollbackPlan) {
@@ -249,15 +252,30 @@ public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, 
         this.txnManager.beginTransaction(Option.empty(), Option.empty());
       }
 
+      if (config.getBasePath().contains(".hoodie/metadata")) {
+        killJVMIfDesired("/tmp/fail72_mt_rollback.txt", "Fail metadata rollback for " + instantToRollback.toString(), 0.1);
+      } else {
+        killJVMIfDesired("/tmp/fail72_dt_rollback.txt", "Fail data table rollback just before writing to MDT " + instantToRollback.toString(), 0.1);
+      }
+
       // If publish the rollback to the timeline, we first write the rollback metadata
       // to metadata table
       if (!skipTimelinePublish) {
         writeTableMetadata(rollbackMetadata);
       }
 
+      if (!config.getBasePath().contains(".hoodie/metadata")) {
+        killJVMIfDesired("/tmp/fail72_dt_rollback.txt", "Fail data table rollback after writing to MDT, before deleting "
+            + "commit meta files for commit to be rolledback. "
+            + instantToRollback.toString(), 0.1);
+      }
       // Then we delete the inflight instant in the data table timeline if enabled
       deleteInflightAndRequestedInstant(deleteInstants, table.getActiveTimeline(), resolvedInstant);
-
+      if (!config.getBasePath().contains(".hoodie/metadata")) {
+        killJVMIfDesired("/tmp/fail72_dt_rollback.txt", "Fail data table rollback after writing to MDT, after deleting commit meta"
+            + "files for commit to be rolledback and before completing in DT "
+            + instantToRollback.toString(), 0.1);
+      }
       // If publish the rollback to the timeline, we finally transition the inflight rollback
       // to complete in the data table timeline
       if (!skipTimelinePublish) {
@@ -277,13 +295,13 @@ public abstract class BaseRollbackActionExecutor<T extends HoodieRecordPayload, 
   /**
    * Delete Inflight instant if enabled.
    *
-   * @param deleteInstant Enable Deletion of Inflight instant
-   * @param activeTimeline Hoodie active timeline
+   * @param deleteInstant      Enable Deletion of Inflight instant
+   * @param activeTimeline     Hoodie active timeline
    * @param instantToBeDeleted Instant to be deleted
    */
   protected void deleteInflightAndRequestedInstant(boolean deleteInstant,
-      HoodieActiveTimeline activeTimeline,
-      HoodieInstant instantToBeDeleted) {
+                                                   HoodieActiveTimeline activeTimeline,
+                                                   HoodieInstant instantToBeDeleted) {
     // Remove the rolled back inflight commits
     if (deleteInstant) {
       LOG.info("Deleting instant=" + instantToBeDeleted);

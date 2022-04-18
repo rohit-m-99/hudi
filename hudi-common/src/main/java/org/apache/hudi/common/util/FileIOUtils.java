@@ -30,6 +30,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +42,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
@@ -50,6 +54,7 @@ import java.util.stream.Collectors;
 public class FileIOUtils {
   public static final Logger LOG = LogManager.getLogger(FileIOUtils.class);
   public static final long KB = 1024;
+  public static final Map<String, Random> RANDOM_MAP = new HashMap<>();
 
   public static void deleteDirectory(File directory) throws IOException {
     if (directory.exists()) {
@@ -203,5 +208,43 @@ public class FileIOUtils {
 
   public static Option<byte[]> readDataFromPath(FileSystem fileSystem, org.apache.hadoop.fs.Path detailPath) {
     return readDataFromPath(fileSystem, detailPath, false);
+  }
+  
+  public static void killJVMIfDesired(String signalFilePath, String msg) {
+    try {
+      final String val = FileIOUtils.readAsUTFString(new FileInputStream(signalFilePath));
+      boolean kill = Boolean.parseBoolean(val.trim());
+      if (kill) {
+        System.out.println("Killing the jvm at " + signalFilePath + " Reason: " + msg);
+        System.exit(1);
+      }
+    } catch (Exception e) {
+      System.err.println(">>> error killing the jvm at " + signalFilePath + " ...");
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Kill with probability of 1/denom
+   *
+   * @param signalFilePath
+   * @param msg
+   * @param probability
+   */
+  public static void killJVMIfDesired(String signalFilePath, String msg, double probability) {
+    try {
+      boolean kill = getRandom(signalFilePath).nextDouble() <= probability;
+      if (kill) {
+        System.out.println("Killing the jvm at " + signalFilePath + " Reason: " + msg);
+        System.exit(1);
+      }
+    } catch (Exception e) {
+      System.err.println(">>> error killing the jvm at " + signalFilePath + " ...");
+      e.printStackTrace();
+    }
+  }
+
+  private static Random getRandom(String signalFilePath) {
+    return RANDOM_MAP.computeIfAbsent(signalFilePath, key -> new Random());
   }
 }
