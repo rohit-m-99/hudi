@@ -22,13 +22,11 @@ import org.apache.hudi.client.HoodieInternalWriteStatus;
 import org.apache.hudi.client.model.HoodieInternalRow;
 import org.apache.hudi.common.fs.FSUtils;
 import org.apache.hudi.common.model.HoodiePartitionMetadata;
-import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.common.model.HoodieWriteStat;
 import org.apache.hudi.common.model.IOType;
 import org.apache.hudi.common.table.HoodieTableConfig;
 import org.apache.hudi.common.util.HoodieTimer;
 import org.apache.hudi.config.HoodieWriteConfig;
-import org.apache.hudi.exception.HoodieIOException;
 import org.apache.hudi.exception.HoodieInsertException;
 import org.apache.hudi.table.HoodieTable;
 import org.apache.hudi.table.marker.WriteMarkersFactory;
@@ -68,8 +66,8 @@ public class HoodieRowCreateHandle implements Serializable {
   private final HoodieTimer currTimer;
 
   public HoodieRowCreateHandle(HoodieTable table, HoodieWriteConfig writeConfig, String partitionPath, String fileId,
-      String instantTime, int taskPartitionId, long taskId, long taskEpochId,
-      StructType structType) {
+                               String instantTime, int taskPartitionId, long taskId, long taskEpochId,
+                               StructType structType) {
     this.partitionPath = partitionPath;
     this.table = table;
     this.writeConfig = writeConfig;
@@ -107,16 +105,16 @@ public class HoodieRowCreateHandle implements Serializable {
   /**
    * Writes an {@link InternalRow} to the underlying HoodieInternalRowFileWriter. Before writing, value for meta columns are computed as required
    * and wrapped in {@link HoodieInternalRow}. {@link HoodieInternalRow} is what gets written to HoodieInternalRowFileWriter.
+   *
    * @param record instance of {@link InternalRow} that needs to be written to the fileWriter.
    * @throws IOException
    */
   public void write(InternalRow record) throws IOException {
     try {
-      String partitionPath = record.getUTF8String(HoodieRecord.HOODIE_META_COLUMNS_NAME_TO_POS.get(
-          HoodieRecord.PARTITION_PATH_METADATA_FIELD)).toString();
-      String seqId = HoodieRecord.generateSequenceId(instantTime, taskPartitionId, SEQGEN.getAndIncrement());
-      String recordKey = record.getUTF8String(HoodieRecord.HOODIE_META_COLUMNS_NAME_TO_POS.get(
-          HoodieRecord.RECORD_KEY_METADATA_FIELD)).toString();
+      String partitionPath = record.getUTF8String(3).toString();
+      //String seqId = HoodieRecord.generateSequenceId(instantTime, taskPartitionId, SEQGEN.getAndIncrement());
+      String seqId = "seq-00001";
+      String recordKey = record.getUTF8String(2).toString();
       HoodieInternalRow internalRow = new HoodieInternalRow(instantTime, seqId, recordKey, partitionPath, path.getName(),
           record);
       try {
@@ -141,6 +139,7 @@ public class HoodieRowCreateHandle implements Serializable {
   /**
    * Closes the {@link HoodieRowCreateHandle} and returns an instance of {@link HoodieInternalWriteStatus} containing the stats and
    * status of the writes to this handle.
+   *
    * @return the {@link HoodieInternalWriteStatus} containing the stats and status of the writes to this handle.
    * @throws IOException
    */
@@ -170,13 +169,13 @@ public class HoodieRowCreateHandle implements Serializable {
 
   private Path makeNewPath(String partitionPath) {
     Path path = FSUtils.getPartitionPath(writeConfig.getBasePath(), partitionPath);
-    try {
-      if (!fs.exists(path)) {
+    /*try {
+      /*if (!fs.exists(path)) {
         fs.mkdirs(path); // create a new partition as needed.
       }
     } catch (IOException e) {
       throw new HoodieIOException("Failed to make dir " + path, e);
-    }
+    }*/
     HoodieTableConfig tableConfig = table.getMetaClient().getTableConfig();
     return new Path(path.toString(), FSUtils.makeDataFileName(instantTime, getWriteToken(), fileId,
         tableConfig.getBaseFileFormat().getFileExtension()));

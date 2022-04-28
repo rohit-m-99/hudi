@@ -20,9 +20,11 @@ package org.apache.hudi;
 
 import org.apache.hudi.common.config.TypedProperties;
 import org.apache.hudi.common.model.HoodieRecord;
+import org.apache.hudi.common.table.HoodieTableConfig;
 import org.apache.hudi.common.util.ReflectionUtils;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.keygen.BuiltinKeyGenerator;
+import org.apache.hudi.keygen.constant.KeyGeneratorOptions;
 import org.apache.hudi.table.BulkInsertPartitioner;
 
 import org.apache.log4j.LogManager;
@@ -31,7 +33,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
-import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 
@@ -42,8 +43,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import scala.collection.JavaConverters;
-
-import static org.apache.spark.sql.functions.callUDF;
 
 /**
  * Helper class to assist in preparing {@link Dataset<Row>}s for bulk insert with datasource implementation.
@@ -57,18 +56,18 @@ public class HoodieDatasetBulkInsertHelper {
 
   /**
    * Prepares input hoodie spark dataset for bulk insert. It does the following steps.
-   *  1. Uses KeyGenerator to generate hoodie record keys and partition path.
-   *  2. Add hoodie columns to input spark dataset.
-   *  3. Reorders input dataset columns so that hoodie columns appear in the beginning.
-   *  4. Sorts input dataset by hoodie partition path and record key
+   * 1. Uses KeyGenerator to generate hoodie record keys and partition path.
+   * 2. Add hoodie columns to input spark dataset.
+   * 3. Reorders input dataset columns so that hoodie columns appear in the beginning.
+   * 4. Sorts input dataset by hoodie partition path and record key
    *
    * @param sqlContext SQL Context
-   * @param config Hoodie Write Config
-   * @param rows Spark Input dataset
+   * @param config     Hoodie Write Config
+   * @param rows       Spark Input dataset
    * @return hoodie dataset which is ready for bulk insert.
    */
   public static Dataset<Row> prepareHoodieDatasetForBulkInsert(SQLContext sqlContext,
-      HoodieWriteConfig config, Dataset<Row> rows, String structName, String recordNamespace,
+                                                               HoodieWriteConfig config, Dataset<Row> rows, String structName, String recordNamespace,
                                                                BulkInsertPartitioner<Dataset<Row>> bulkInsertPartitionerRows,
                                                                boolean isGlobalIndex, boolean dropPartitionColumns) {
     List<Column> originalFields =
@@ -77,8 +76,10 @@ public class HoodieDatasetBulkInsertHelper {
     TypedProperties properties = new TypedProperties();
     properties.putAll(config.getProps());
     String keyGeneratorClass = properties.getString(DataSourceWriteOptions.KEYGENERATOR_CLASS_NAME().key());
+    String recordKeyField = properties.getString(KeyGeneratorOptions.RECORDKEY_FIELD_NAME.key());
+    boolean populateMetaFields = properties.getBoolean(HoodieTableConfig.POPULATE_META_FIELDS.key(), HoodieTableConfig.POPULATE_META_FIELDS.defaultValue());
     BuiltinKeyGenerator keyGenerator = (BuiltinKeyGenerator) ReflectionUtils.loadClass(keyGeneratorClass, properties);
-    String tableName = properties.getString(HoodieWriteConfig.TBL_NAME.key());
+    /*String tableName = properties.getString(HoodieWriteConfig.TBL_NAME.key());
     String recordKeyUdfFn = RECORD_KEY_UDF_FN + tableName;
     String partitionPathUdfFn = PARTITION_PATH_UDF_FN + tableName;
     sqlContext.udf().register(recordKeyUdfFn, (UDF1<Row, String>) keyGenerator::getRecordKey, DataTypes.StringType);
@@ -92,12 +93,17 @@ public class HoodieDatasetBulkInsertHelper {
         rowDatasetWithRecordKeys.withColumn(HoodieRecord.PARTITION_PATH_METADATA_FIELD,
             callUDF(partitionPathUdfFn,
                 org.apache.spark.sql.functions.struct(
-                    JavaConverters.collectionAsScalaIterableConverter(originalFields).asScala().toSeq())));
+                    JavaConverters.collectionAsScalaIterableConverter(originalFields).asScala().toSeq())));*/
+
+    final Dataset<Row> rowDatasetWithRecordKeys = populateMetaFields ? (rows.withColumn(HoodieRecord.RECORD_KEY_METADATA_FIELD, functions.col(recordKeyField))) :
+        (rows.withColumn(HoodieRecord.RECORD_KEY_METADATA_FIELD, functions.lit("").cast(DataTypes.StringType)));
+    final Dataset<Row> rowDatasetWithRecordKeysAndPartitionPath =
+        rowDatasetWithRecordKeys.withColumn(HoodieRecord.PARTITION_PATH_METADATA_FIELD, functions.lit("").cast(DataTypes.StringType));
 
     // Add other empty hoodie fields which will be populated before writing to parquet.
     Dataset<Row> rowDatasetWithHoodieColumns =
         rowDatasetWithRecordKeysAndPartitionPath.withColumn(HoodieRecord.COMMIT_TIME_METADATA_FIELD,
-            functions.lit("").cast(DataTypes.StringType))
+                functions.lit("").cast(DataTypes.StringType))
             .withColumn(HoodieRecord.COMMIT_SEQNO_METADATA_FIELD,
                 functions.lit("").cast(DataTypes.StringType))
             .withColumn(HoodieRecord.FILENAME_METADATA_FIELD,
@@ -106,7 +112,7 @@ public class HoodieDatasetBulkInsertHelper {
     Dataset<Row> processedDf = rowDatasetWithHoodieColumns;
     if (dropPartitionColumns) {
       String partitionColumns = String.join(",", keyGenerator.getPartitionPathFields());
-      for (String partitionField: keyGenerator.getPartitionPathFields()) {
+      for (String partitionField : keyGenerator.getPartitionPathFields()) {
         originalFields.remove(new Column(partitionField));
       }
       processedDf = rowDatasetWithHoodieColumns.drop(partitionColumns);

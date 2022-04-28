@@ -33,6 +33,8 @@ public abstract class BulkInsertInternalPartitionerWithRowsFactory {
     switch (sortMode) {
       case NONE:
         return new NonSortPartitionerWithRows();
+      case NONE_NO_COALESCE:
+        return new NonSortNoCoalesceWithRows();
       case GLOBAL_SORT:
         return new GlobalSortPartitionerWithRows();
       case PARTITION_SORT:

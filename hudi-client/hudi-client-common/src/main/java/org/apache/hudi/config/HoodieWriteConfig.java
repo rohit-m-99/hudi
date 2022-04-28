@@ -167,6 +167,11 @@ public class HoodieWriteConfig extends HoodieConfig {
           + "implementations of HoodieRecordPayload to convert incoming records to avro. This is also used as the write schema "
           + "evolving records during an update.");
 
+  public static final ConfigProperty<Boolean> AVOID_CUSTOM_DS = ConfigProperty
+      .key("bulk_insert.avoid.custom.ds")
+      .defaultValue(false)
+      .withDocumentation("abc");
+
   public static final ConfigProperty<String> INTERNAL_SCHEMA_STRING = ConfigProperty
       .key("hoodie.internal.schema")
       .noDefaultValue()

@@ -23,6 +23,7 @@ package org.apache.hudi.execution.bulkinsert;
  */
 public enum BulkInsertSortMode {
     NONE,
+    NONE_NO_COALESCE,
     GLOBAL_SORT,
     PARTITION_SORT
 }

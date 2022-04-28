@@ -513,7 +513,7 @@ object HoodieSparkSqlWriter {
     if (dropPartitionColumns) {
       schema = generateSchemaWithoutPartitionColumns(partitionColumns, schema)
     }
-    validateSchemaForHoodieIsDeleted(schema)
+    // validateSchemaForHoodieIsDeleted(schema)
     sparkContext.getConf.registerAvroSchemas(schema)
     log.info(s"Registered avro schema : ${schema.toString(true)}")
     if (parameters(INSERT_DROP_DUPS.key).toBoolean) {
@@ -563,8 +563,7 @@ object HoodieSparkSqlWriter {
       throw new HoodieException("Bulk insert using row writer is not supported with current Spark version."
         + " To use row writer please switch to spark 2 or spark 3")
     }
-    val hoodieConfig = HoodieWriterUtils.convertMapToHoodieConfig(params)
-    val syncHiveSuccess = metaSync(sqlContext.sparkSession, hoodieConfig, basePath, df.schema)
+    val syncHiveSuccess = metaSync(sqlContext.sparkSession, writeConfig, basePath, df.schema)
     (syncHiveSuccess, common.util.Option.ofNullable(instantTime))
   }
 

@@ -387,12 +387,12 @@ public class HoodieTableMetaClient implements Serializable {
     }
 
     // meta fields can be disabled only with SimpleKeyGenerator
-    if (!getTableConfig().populateMetaFields()
+    /*if (!getTableConfig().populateMetaFields()
         && !properties.getProperty(HoodieTableConfig.KEY_GENERATOR_CLASS_NAME.key(), "org.apache.hudi.keygen.SimpleKeyGenerator")
         .equals("org.apache.hudi.keygen.SimpleKeyGenerator")) {
       throw new HoodieException("Only simple key generator is supported when meta fields are disabled. KeyGenerator used : "
           + properties.getProperty(HoodieTableConfig.KEY_GENERATOR_CLASS_NAME.key()));
-    }
+    }*/
   }
 
   /**
