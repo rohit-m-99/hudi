@@ -295,10 +295,8 @@ public class TimelineService {
     startService();
   }
 
-  public static FileSystemViewManager buildFileSystemViewManager(Config config, SerializableConfiguration conf) {
+  public static FileSystemViewManager buildFileSystemViewManager(Config config, SerializableConfiguration conf, HoodieMetadataConfig metadataConfig) {
     HoodieLocalEngineContext localEngineContext = new HoodieLocalEngineContext(conf.get());
-    // Just use defaults for now
-    HoodieMetadataConfig metadataConfig = HoodieMetadataConfig.newBuilder().build();
     HoodieCommonConfig commonConfig = HoodieCommonConfig.newBuilder().build();
 
     switch (config.viewStorageType) {
@@ -355,7 +353,8 @@ public class TimelineService {
     }
 
     Configuration conf = FSUtils.prepareHadoopConf(new Configuration());
-    FileSystemViewManager viewManager = buildFileSystemViewManager(cfg, new SerializableConfiguration(conf));
+    // use defaults for HoodieMetadataConfig.
+    FileSystemViewManager viewManager = buildFileSystemViewManager(cfg, new SerializableConfiguration(conf), HoodieMetadataConfig.newBuilder().build());
     TimelineService service = new TimelineService(
         new HoodieLocalEngineContext(FSUtils.prepareHadoopConf(new Configuration())),
         new Configuration(), cfg, FileSystem.get(new Configuration()), viewManager);

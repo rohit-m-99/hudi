@@ -51,6 +51,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -79,7 +80,8 @@ public class TimelineServerPerf implements Serializable {
         new HoodieLocalEngineContext(FSUtils.prepareHadoopConf(new Configuration())),
         new Configuration(), timelineServiceConf, FileSystem.get(new Configuration()),
         TimelineService.buildFileSystemViewManager(timelineServiceConf,
-            new SerializableConfiguration(FSUtils.prepareHadoopConf(new Configuration()))));
+            new SerializableConfiguration(FSUtils.prepareHadoopConf(new Configuration())),
+            HoodieMetadataConfig.newBuilder().enable(cfg.useFileListingFromMetadata).enableFullScan(!cfg.enablePointLookups).build()));
   }
 
   private void setHostAddrFromSparkConf(SparkConf sparkConf) {
@@ -92,69 +94,214 @@ public class TimelineServerPerf implements Serializable {
     }
   }
 
-  public void run() throws IOException {
+  public void runFileSliceLookups() throws IOException {
     JavaSparkContext jsc = UtilHelpers.buildSparkContext("hudi-view-perf-" + cfg.basePath, cfg.sparkMaster);
-    HoodieSparkEngineContext engineContext = new HoodieSparkEngineContext(jsc);
-    List<String> allPartitionPaths = FSUtils.getAllPartitionPaths(engineContext, cfg.basePath, cfg.useFileListingFromMetadata, true);
-    Collections.shuffle(allPartitionPaths);
-    List<String> selected = allPartitionPaths.stream().filter(p -> !p.contains("error")).limit(cfg.maxPartitions)
-        .collect(Collectors.toList());
+    try {
+      HoodieSparkEngineContext engineContext = new HoodieSparkEngineContext(jsc);
+      List<String> allPartitionPaths = FSUtils.getAllPartitionPaths(engineContext, cfg.basePath, cfg.useFileListingFromMetadata, true);
+      Collections.shuffle(allPartitionPaths);
+      List<String> selected = allPartitionPaths.stream().filter(p -> !p.contains("error")).limit(cfg.maxPartitions)
+          .collect(Collectors.toList());
 
-    if (!useExternalTimelineServer) {
-      this.timelineServer.startService();
-      setHostAddrFromSparkConf(jsc.getConf());
-    } else {
-      this.hostAddr = cfg.serverHost;
-    }
+      if (!useExternalTimelineServer) {
+        this.timelineServer.startService();
+        setHostAddrFromSparkConf(jsc.getConf());
+      } else {
+        this.hostAddr = cfg.serverHost;
+      }
 
-    HoodieTableMetaClient metaClient = HoodieTableMetaClient.builder().setConf(timelineServer.getConf()).setBasePath(cfg.basePath).setLoadActiveTimelineOnLoad(true).build();
-    SyncableFileSystemView fsView = new RemoteHoodieTableFileSystemView(this.hostAddr, cfg.serverPort, metaClient);
+      HoodieTableMetaClient metaClient = HoodieTableMetaClient.builder().setConf(timelineServer.getConf()).setBasePath(cfg.basePath).setLoadActiveTimelineOnLoad(true).build();
+      SyncableFileSystemView fsView = new RemoteHoodieTableFileSystemView(this.hostAddr, cfg.serverPort, metaClient);
 
-    String reportDir = cfg.reportDir;
-    metaClient.getFs().mkdirs(new Path(reportDir));
+      String reportDir = cfg.reportDir;
+      metaClient.getFs().mkdirs(new Path(reportDir));
 
-    String dumpPrefix = UUID.randomUUID().toString();
-    System.out.println("First Iteration to load all partitions");
-    Dumper d = new Dumper(metaClient.getFs(), new Path(reportDir, String.format("1_%s.csv", dumpPrefix)));
-    d.init();
-    d.dump(runLookups(jsc, selected, fsView, 1, 0));
-    d.close();
-    System.out.println("\n\n\n First Iteration is done");
+      String dumpPrefix = UUID.randomUUID().toString();
+      LOG.info("First Iteration to load all partitions");
+      Dumper d = new Dumper(metaClient.getFs(), new Path(reportDir, String.format("1_%s.csv", dumpPrefix)));
+      d.init();
+      d.dump(runLookups(jsc, selected, fsView, 1, 0));
+      d.close();
+      LOG.info("\n\n\n First Iteration is done");
 
-    Dumper d2 = new Dumper(metaClient.getFs(), new Path(reportDir, String.format("2_%s.csv", dumpPrefix)));
-    d2.init();
-    d2.dump(runLookups(jsc, selected, fsView, cfg.numIterations, cfg.numCoresPerExecutor));
-    d2.close();
+      Dumper d2 = new Dumper(metaClient.getFs(), new Path(reportDir, String.format("2_%s.csv", dumpPrefix)));
+      d2.init();
+      d2.dump(runLookups(jsc, selected, fsView, cfg.numIterations, cfg.numCoresPerExecutor));
+      d2.close();
 
-    System.out.println("\n\n\nDumping all File Slices");
-    selected.forEach(p -> fsView.getAllFileSlices(p).forEach(s -> System.out.println("\tMyFileSlice=" + s)));
+      LOG.info("\n\n\nDumping all File Slices");
+      selected.forEach(p -> fsView.getAllFileSlices(p).forEach(s -> System.out.println("\tMyFileSlice=" + s)));
 
-    // Waiting for curl queries
-    if (!useExternalTimelineServer && cfg.waitForManualQueries) {
-      System.out.println("Timeline Server Host Address=" + hostAddr + ", port=" + timelineServer.getServerPort());
-      while (true) {
-        try {
-          Thread.sleep(60000);
-        } catch (InterruptedException e) {
-          // skip it
+      LOG.info("Completed dumping all file slices ");
+      // Waiting for curl queries
+      if (!useExternalTimelineServer && cfg.waitForManualQueries) {
+        System.out.println("Timeline Server Host Address=" + hostAddr + ", port=" + timelineServer.getServerPort());
+        while (true) {
+          try {
+            Thread.sleep(60000);
+          } catch (InterruptedException e) {
+            // skip it
+          }
         }
       }
+    } finally {
+      if (timelineServer != null) {
+        timelineServer.close();
+      }
+      jsc.stop();
+    }
+  }
+
+  public void runFetchAllFilesInPartitionsTimelineServer() throws IOException {
+    JavaSparkContext jsc = UtilHelpers.buildSparkContext("hudi-view-perf-" + cfg.basePath, cfg.sparkMaster);
+    try {
+      String[] partitions = cfg.listofPartitions.split(",");
+
+      if (!useExternalTimelineServer) {
+        this.timelineServer.startService();
+        setHostAddrFromSparkConf(jsc.getConf());
+      } else {
+        this.hostAddr = cfg.serverHost;
+      }
+
+      HoodieTableMetaClient metaClient = HoodieTableMetaClient.builder().setConf(timelineServer.getConf()).setBasePath(cfg.basePath).setLoadActiveTimelineOnLoad(true).build();
+      SyncableFileSystemView fsView = new RemoteHoodieTableFileSystemView(this.hostAddr, cfg.serverPort, metaClient);
+
+      String reportDir = cfg.reportDir;
+      Path reportDirPath = new Path(reportDir);
+      FileSystem reportDirFs = reportDirPath.getFileSystem(timelineServer.getConf());
+      reportDirFs.mkdirs(reportDirPath);
+
+      String dumpPrefix = UUID.randomUUID().toString();
+      LOG.info("First Iteration to fetch all files in partition");
+      Dumper d = new Dumper(reportDirFs, new Path(reportDir, String.format("1_%s.csv", dumpPrefix)));
+      d.init();
+      d.dump(runFetchFilesPerPartitionBasedOnTimelineServer(jsc, Arrays.asList(partitions), fsView, 1));
+      d.close();
+      LOG.info("\n\n\n First Iteration is done");
+
+      Dumper d2 = new Dumper(reportDirFs, new Path(reportDir, String.format("2_%s.csv", dumpPrefix)));
+      d2.init();
+      d2.dump(runFetchFilesPerPartitionBasedOnTimelineServer(jsc, Arrays.asList(partitions), fsView, cfg.numIterations));
+      d2.close();
+
+      LOG.info("Completed fetching all file slices ");
+    } finally {
+      if (timelineServer != null) {
+        timelineServer.close();
+      }
+      jsc.stop();
+    }
+  }
+
+  public void runFetchAllFilesInPartitionsFsUtils() throws IOException {
+    JavaSparkContext jsc = UtilHelpers.buildSparkContext("hudi-view-perf-" + cfg.basePath, cfg.sparkMaster);
+    try {
+      HoodieTableMetaClient metaClient = HoodieTableMetaClient.builder().setConf(timelineServer.getConf()).setBasePath(cfg.basePath).setLoadActiveTimelineOnLoad(true).build();
+      String reportDir = cfg.reportDir;
+      Path reportDirPath = new Path(reportDir);
+      FileSystem reportDirFs = reportDirPath.getFileSystem(timelineServer.getConf());
+      reportDirFs.mkdirs(reportDirPath);
+      String[] partitions = cfg.listofPartitions.split(",");
+
+      String dumpPrefix = UUID.randomUUID().toString();
+      LOG.info("First Iteration to load all files in partitions");
+      Dumper d = new Dumper(reportDirFs, new Path(reportDir, String.format("1_%s.csv", dumpPrefix)));
+      d.init();
+      d.dump(runFetchAllFilesInPartitionsFsUtils(jsc, cfg.basePath, partitions, cfg.useFileListingFromMetadata, 1, cfg.baseStorePathForFileGroups,
+          cfg.enablePointLookups));
+      d.close();
+      LOG.info("\n\n\n First Iteration is done");
+
+      Dumper d2 = new Dumper(reportDirFs, new Path(reportDir, String.format("2_%s.csv", dumpPrefix)));
+      d2.init();
+      d2.dump(runFetchAllFilesInPartitionsFsUtils(jsc, cfg.basePath, partitions, cfg.useFileListingFromMetadata, cfg.numIterations, cfg.baseStorePathForFileGroups,
+          cfg.enablePointLookups));
+      d2.close();
+
+      LOG.info("Completed perf run ");
+    } finally {
+      if (timelineServer != null) {
+        timelineServer.close();
+      }
+      jsc.stop();
     }
   }
 
   public List<PerfStats> runLookups(JavaSparkContext jsc, List<String> partitionPaths, SyncableFileSystemView fsView,
-      int numIterations, int concurrency) {
+                                    int numIterations, int concurrency) {
     HoodieEngineContext context = new HoodieSparkEngineContext(jsc);
     context.setJobStatus(this.getClass().getSimpleName(), "Lookup all performance stats");
     return context.flatMap(partitionPaths, p -> {
       ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(100);
+      try {
+        final List<PerfStats> result = new ArrayList<>();
+        final List<ScheduledFuture<PerfStats>> futures = new ArrayList<>();
+        List<FileSlice> slices = fsView.getLatestFileSlices(p).collect(Collectors.toList());
+        String fileId = slices.isEmpty() ? "dummyId"
+            : slices.get(new Random(Double.doubleToLongBits(Math.random())).nextInt(slices.size())).getFileId();
+        IntStream.range(0, concurrency).forEach(i -> futures.add(executor.schedule(() -> runOneRound(fsView, p, fileId,
+            i, numIterations), 0, TimeUnit.NANOSECONDS)));
+        futures.forEach(x -> {
+          try {
+            result.add(x.get());
+          } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+          }
+        });
+        LOG.info("SLICES are=");
+        slices.forEach(s -> LOG.info("\t\tFileSlice=" + s));
+        return result.stream();
+      } finally {
+        executor.shutdownNow();
+      }
+    }, cfg.numExecutors);
+  }
+
+  private static PerfStats runOneRound(SyncableFileSystemView fsView, String partition, String fileId, int id,
+                                       int numIterations) {
+    Histogram latencyHistogram = new Histogram(new UniformReservoir(10000));
+    for (int i = 0; i < numIterations; i++) {
+      long beginTs = System.currentTimeMillis();
+      Option<FileSlice> c = fsView.getLatestFileSlice(partition, fileId);
+      long endTs = System.currentTimeMillis();
+      LOG.info("Latest File Slice for part=" + partition + ", fileId=" + fileId + ", Slice=" + c + ", Time="
+          + (endTs - beginTs));
+      latencyHistogram.update(endTs - beginTs);
+    }
+    return new PerfStats(new String[] {partition}, id, latencyHistogram.getSnapshot());
+  }
+
+  public List<PerfStats> runFetchFilesPerPartitionBasedOnTimelineServer(JavaSparkContext jsc, List<String> partitionPaths, SyncableFileSystemView fsView,
+                                                                        int numIterations) {
+    HoodieEngineContext context = new HoodieSparkEngineContext(jsc);
+    context.setJobStatus(this.getClass().getSimpleName(), "Lookup all performance stats");
+    final List<PerfStats> result = new ArrayList<>();
+    Histogram latencyHistogram = new Histogram(new UniformReservoir(10000));
+    for (int i = 0; i < numIterations; i++) {
+      long beginTs = System.currentTimeMillis();
+      partitionPaths.forEach(p -> fsView.getLatestFileSlices(p).collect(Collectors.toList()));
+      long endTs = System.currentTimeMillis();
+      LOG.info("Latest File Slices for partitions=" + Arrays.toString(partitionPaths.toArray()) + ", Time=" + (endTs - beginTs));
+      latencyHistogram.update(endTs - beginTs);
+    }
+    result.add(new PerfStats((String[]) partitionPaths.toArray(), 1, latencyHistogram.getSnapshot()));
+    return result;
+  }
+
+  public List<PerfStats> runFetchAllFilesInPartitionsFsUtils(JavaSparkContext jsc, String basePath, String[] partitionPaths, boolean enableMetadata,
+                                                             int numIterations, String spillableMapBasePath,
+                                                             boolean enablePointLookups) {
+    HoodieEngineContext context = new HoodieSparkEngineContext(jsc);
+    context.setJobStatus(this.getClass().getSimpleName(), "Lookup all performance stats");
+    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(100);
+    try {
+      HoodieMetadataConfig metadataConfig = HoodieMetadataConfig.newBuilder().enable(enableMetadata).enableFullScan(!enablePointLookups).build();
       final List<PerfStats> result = new ArrayList<>();
       final List<ScheduledFuture<PerfStats>> futures = new ArrayList<>();
-      List<FileSlice> slices = fsView.getLatestFileSlices(p).collect(Collectors.toList());
-      String fileId = slices.isEmpty() ? "dummyId"
-          : slices.get(new Random(Double.doubleToLongBits(Math.random())).nextInt(slices.size())).getFileId();
-      IntStream.range(0, concurrency).forEach(i -> futures.add(executor.schedule(() -> runOneRound(fsView, p, fileId,
-          i, numIterations), 0, TimeUnit.NANOSECONDS)));
+      IntStream.range(0, 1).forEach(i -> futures.add(executor.schedule(() ->
+          runOneRoundFetchAllFilesPerPartition(basePath, context, metadataConfig, partitionPaths,
+              i, numIterations, spillableMapBasePath), 0, TimeUnit.NANOSECONDS)));
       futures.forEach(x -> {
         try {
           result.add(x.get());
@@ -162,24 +309,24 @@ public class TimelineServerPerf implements Serializable {
           throw new RuntimeException(e);
         }
       });
-      System.out.println("SLICES are=");
-      slices.forEach(s -> System.out.println("\t\tFileSlice=" + s));
-      return result.stream();
-    }, cfg.numExecutors);
+      return result;
+    } finally {
+      executor.shutdownNow();
+    }
   }
 
-  private static PerfStats runOneRound(SyncableFileSystemView fsView, String partition, String fileId, int id,
-      int numIterations) {
+  private static PerfStats runOneRoundFetchAllFilesPerPartition(String basePath, HoodieEngineContext context, HoodieMetadataConfig metadataConfig,
+                                                                String[] partitions, int id,
+                                                                int numIterations, String spillableMapBasePath) {
     Histogram latencyHistogram = new Histogram(new UniformReservoir(10000));
     for (int i = 0; i < numIterations; i++) {
       long beginTs = System.currentTimeMillis();
-      Option<FileSlice> c = fsView.getLatestFileSlice(partition, fileId);
+      FSUtils.getFilesInPartitions(context, metadataConfig, basePath, partitions, spillableMapBasePath + "/" + id);
       long endTs = System.currentTimeMillis();
-      System.out.println("Latest File Slice for part=" + partition + ", fileId=" + fileId + ", Slice=" + c + ", Time="
-          + (endTs - beginTs));
+      LOG.info("Fetching all files for partitions =" + Arrays.toString(partitions) + ", Time=" + (endTs - beginTs));
       latencyHistogram.update(endTs - beginTs);
     }
-    return new PerfStats(partition, id, latencyHistogram.getSnapshot());
+    return new PerfStats(partitions, id, latencyHistogram.getSnapshot());
   }
 
   private static class Dumper implements Serializable {
@@ -199,15 +346,15 @@ public class TimelineServerPerf implements Serializable {
     }
 
     private void addHeader() throws IOException {
-      String header = "Partition,Thread,Min,Max,Mean,Median,75th,95th\n";
+      String header = "Partitions,Thread,Min,Max,Mean,Median,75th,95th\n";
       outputStream.write(header.getBytes());
       outputStream.flush();
     }
 
     public void dump(List<PerfStats> stats) {
       stats.forEach(x -> {
-        String row = String.format("%s,%d,%d,%d,%f,%f,%f,%f\n", x.partition, x.id, x.minTime, x.maxTime, x.meanTime,
-            x.medianTime, x.p75, x.p95);
+        String row = String.format("Partition: %s, Id: %d, size: %d, minTime: %d, maxTime: %d, meanTime: %f, medianTime: %f, p75: %f, p95: %f\n", Arrays.toString(x.partition), x.id, x.size,
+            x.minTime, x.maxTime, x.meanTime, x.medianTime, x.p75, x.p95);
         System.out.println(row);
         try {
           outputStream.write(row.getBytes());
@@ -224,8 +371,9 @@ public class TimelineServerPerf implements Serializable {
 
   private static class PerfStats implements Serializable {
 
-    private final String partition;
+    private final String[] partition;
     private final int id;
+    private final int size;
     private final long minTime;
     private final long maxTime;
     private final double meanTime;
@@ -233,15 +381,16 @@ public class TimelineServerPerf implements Serializable {
     private final double p95;
     private final double p75;
 
-    public PerfStats(String partition, int id, Snapshot s) {
-      this(partition, id, s.getMin(), s.getMax(), s.getMean(), s.getMedian(), s.get95thPercentile(),
+    public PerfStats(String[] partition, int id, Snapshot s) {
+      this(partition, id, s.size(), s.getMin(), s.getMax(), s.getMean(), s.getMedian(), s.get95thPercentile(),
           s.get75thPercentile());
     }
 
-    public PerfStats(String partition, int id, long minTime, long maxTime, double meanTime, double medianTime,
-        double p95, double p75) {
+    public PerfStats(String[] partition, int id, int size, long minTime, long maxTime, double meanTime, double medianTime,
+                     double p95, double p75) {
       this.partition = partition;
       this.id = id;
+      this.size = size;
       this.minTime = minTime;
       this.maxTime = maxTime;
       this.meanTime = meanTime;
@@ -251,6 +400,12 @@ public class TimelineServerPerf implements Serializable {
     }
   }
 
+  public static enum RunMode {
+    FileSliceLookup,
+    FetchFilesInPartitionsFSUtils,
+    FetchFilesInPartitionsTimelineServer
+  }
+
   public static class Config implements Serializable {
 
     @Parameter(names = {"--base-path", "-b"}, description = "Base Path", required = true)
@@ -258,6 +413,9 @@ public class TimelineServerPerf implements Serializable {
 
     @Parameter(names = {"--report-dir", "-rd"}, description = "Dir where reports are added", required = true)
     public String reportDir = "";
+
+    @Parameter(names = {"--run-mode", "-rm"}, description = "Run mode. FileSliceLookup, FetchFilesInPartitions, FetchFilesInPartitionsTimelineServer")
+    public String runMode = "FileSliceLookup";
 
     @Parameter(names = {"--max-partitions", "-m"}, description = "Mx partitions to be loaded")
     public Integer maxPartitions = 1000;
@@ -307,6 +465,12 @@ public class TimelineServerPerf implements Serializable {
     @Parameter(names = {"--use-file-listing-from-metadata"}, description = "Fetch file listing from Hudi's metadata")
     public Boolean useFileListingFromMetadata = HoodieMetadataConfig.DEFAULT_METADATA_ENABLE_FOR_READERS;
 
+    @Parameter(names = {"--list-of-partitions-to-list-files", "-pl"}, description = "Used with RunMode: FetchFilesInPartitions. comma separated list of partitions to list")
+    public String listofPartitions = "";
+
+    @Parameter(names = {"--enable-point-lookups-metadata-table"}, description = "Avoid full scan and do point look ups in metadata table")
+    public Boolean enablePointLookups = !HoodieMetadataConfig.ENABLE_FULL_SCAN_LOG_FILES.defaultValue();
+
     @Parameter(names = {"--help", "-h"})
     public Boolean help = false;
 
@@ -330,6 +494,13 @@ public class TimelineServerPerf implements Serializable {
       System.exit(1);
     }
     TimelineServerPerf perf = new TimelineServerPerf(cfg);
-    perf.run();
+    RunMode runMode = RunMode.valueOf(cfg.runMode);
+    if (runMode == RunMode.FileSliceLookup) {
+      perf.runFileSliceLookups();
+    } else if (runMode == RunMode.FetchFilesInPartitionsFSUtils) {
+      perf.runFetchAllFilesInPartitionsFsUtils();
+    } else {
+      perf.runFetchAllFilesInPartitionsTimelineServer();
+    }
   }
 }
