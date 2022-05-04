@@ -72,16 +72,18 @@ public class TimelineServerPerf implements Serializable {
   private final boolean useExternalTimelineServer;
   private String hostAddr;
 
-  public TimelineServerPerf(Config cfg) throws IOException {
+  public TimelineServerPerf(Config cfg, boolean honorMetadataConfigs) throws IOException {
     this.cfg = cfg;
     useExternalTimelineServer = (cfg.serverHost != null);
     TimelineService.Config timelineServiceConf = cfg.getTimelineServerConfig();
+    boolean enableMetadata = honorMetadataConfigs ? cfg.useFileListingFromMetadata : HoodieMetadataConfig.ENABLE.defaultValue();
+    boolean enablePointLookups = honorMetadataConfigs ? cfg.enablePointLookups : !HoodieMetadataConfig.ENABLE_FULL_SCAN_LOG_FILES.defaultValue();
     this.timelineServer = new TimelineService(
         new HoodieLocalEngineContext(FSUtils.prepareHadoopConf(new Configuration())),
         new Configuration(), timelineServiceConf, FileSystem.get(new Configuration()),
         TimelineService.buildFileSystemViewManager(timelineServiceConf,
             new SerializableConfiguration(FSUtils.prepareHadoopConf(new Configuration())),
-            HoodieMetadataConfig.newBuilder().enable(cfg.useFileListingFromMetadata).enableFullScan(!cfg.enablePointLookups).build()));
+            HoodieMetadataConfig.newBuilder().enable(enableMetadata).enableFullScan(!enablePointLookups).build()));
   }
 
   private void setHostAddrFromSparkConf(SparkConf sparkConf) {
@@ -321,7 +323,7 @@ public class TimelineServerPerf implements Serializable {
     Histogram latencyHistogram = new Histogram(new UniformReservoir(10000));
     for (int i = 0; i < numIterations; i++) {
       long beginTs = System.currentTimeMillis();
-      FSUtils.getFilesInPartitions(context, metadataConfig, basePath, partitions, spillableMapBasePath + "/" + id);
+      FSUtils.getFilesInPartitions(context, metadataConfig, basePath, partitions, spillableMapBasePath + "/" + id + "_" + i);
       long endTs = System.currentTimeMillis();
       LOG.info("Fetching all files for partitions =" + Arrays.toString(partitions) + ", Time=" + (endTs - beginTs));
       latencyHistogram.update(endTs - beginTs);
@@ -346,15 +348,15 @@ public class TimelineServerPerf implements Serializable {
     }
 
     private void addHeader() throws IOException {
-      String header = "Partitions,Thread,Min,Max,Mean,Median,75th,95th\n";
+      String header = "Partitions,Thread,Size,Min,Max,Mean,Median,75th,95th,StdDev\n";
       outputStream.write(header.getBytes());
       outputStream.flush();
     }
 
     public void dump(List<PerfStats> stats) {
       stats.forEach(x -> {
-        String row = String.format("Partition: %s, Id: %d, size: %d, minTime: %d, maxTime: %d, meanTime: %f, medianTime: %f, p75: %f, p95: %f\n", Arrays.toString(x.partition), x.id, x.size,
-            x.minTime, x.maxTime, x.meanTime, x.medianTime, x.p75, x.p95);
+        String row = String.format("Partition: %s, Id: %d, size: %d, minTime: %d, maxTime: %d, meanTime: %f, medianTime: %f, p75: %f, p95: %f, stdDev: %f \n",
+            Arrays.toString(x.partition), x.id, x.size, x.minTime, x.maxTime, x.meanTime, x.medianTime, x.p75, x.p95, x.stdDev);
         System.out.println(row);
         try {
           outputStream.write(row.getBytes());
@@ -380,14 +382,15 @@ public class TimelineServerPerf implements Serializable {
     private final double medianTime;
     private final double p95;
     private final double p75;
+    private final double stdDev;
 
     public PerfStats(String[] partition, int id, Snapshot s) {
       this(partition, id, s.size(), s.getMin(), s.getMax(), s.getMean(), s.getMedian(), s.get95thPercentile(),
-          s.get75thPercentile());
+          s.get75thPercentile(), s.getStdDev());
     }
 
     public PerfStats(String[] partition, int id, int size, long minTime, long maxTime, double meanTime, double medianTime,
-                     double p95, double p75) {
+                     double p95, double p75, double stdDev) {
       this.partition = partition;
       this.id = id;
       this.size = size;
@@ -397,6 +400,7 @@ public class TimelineServerPerf implements Serializable {
       this.medianTime = medianTime;
       this.p95 = p95;
       this.p75 = p75;
+      this.stdDev = stdDev;
     }
   }
 
@@ -493,8 +497,8 @@ public class TimelineServerPerf implements Serializable {
       cmd.usage();
       System.exit(1);
     }
-    TimelineServerPerf perf = new TimelineServerPerf(cfg);
     RunMode runMode = RunMode.valueOf(cfg.runMode);
+    TimelineServerPerf perf = new TimelineServerPerf(cfg, runMode != RunMode.FetchFilesInPartitionsFSUtils);
     if (runMode == RunMode.FileSliceLookup) {
       perf.runFileSliceLookups();
     } else if (runMode == RunMode.FetchFilesInPartitionsFSUtils) {
