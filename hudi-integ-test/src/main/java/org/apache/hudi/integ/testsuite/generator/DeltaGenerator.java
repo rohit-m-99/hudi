@@ -125,7 +125,7 @@ public class DeltaGenerator implements Serializable {
     // Each spark partition below will generate records for a single partition given by the integer index.
     List<Integer> partitionIndexes = IntStream.rangeClosed(0 + startPartition, numPartitions + startPartition - 1)
         .boxed().collect(Collectors.toList());
-
+    log.warn("XXX Generating Insert records");
     JavaRDD<GenericRecord> inputBatch = jsc.parallelize(partitionIndexes, numPartitions)
         .mapPartitionsWithIndex((index, p) -> {
           return new LazyRecordGeneratorIterator(new FlexibleSchemaRecordGenerationIterator(recordsPerPartition,
@@ -133,6 +133,9 @@ public class DeltaGenerator implements Serializable {
         }, true)
         .map(record -> {
           record.put(SchemaUtils.SOURCE_ORDERING_FIELD, batchId);
+          log.warn("  XXX Insert Rec : " + record.get(SchemaUtils.SOURCE_ORDERING_FIELD) + ", " +
+              record.get(SchemaUtils.TIMESTAMP_FIELD) + ", " + record.get(SchemaUtils.ROW_KEY_FIELD) +
+              ", " + record.get(SchemaUtils.BEGIN_LAT_FIELD));
           return record;
         });
 
@@ -188,6 +191,9 @@ public class DeltaGenerator implements Serializable {
         JavaRDD<GenericRecord> convertedRecords = converter.convert(adjustedRDD);
         JavaRDD<GenericRecord> updates = convertedRecords.map(record -> {
           record.put(SchemaUtils.SOURCE_ORDERING_FIELD, batchId);
+          log.warn("  XXX Update Rec : " + record.get(SchemaUtils.SOURCE_ORDERING_FIELD) + ", " +
+              record.get(SchemaUtils.TIMESTAMP_FIELD) + ", " + record.get(SchemaUtils.ROW_KEY_FIELD) +
+              ", " + record.get(SchemaUtils.BEGIN_LAT_FIELD));
           return record;
         });
         updates.persist(StorageLevel.DISK_ONLY());
@@ -235,6 +241,9 @@ public class DeltaGenerator implements Serializable {
       JavaRDD<GenericRecord> convertedRecords = converter.convert(adjustedRDD);
       JavaRDD<GenericRecord> deletes = convertedRecords.map(record -> {
         record.put(SchemaUtils.SOURCE_ORDERING_FIELD, batchId);
+        log.warn("  XXX Delete Rec : " + record.get(SchemaUtils.SOURCE_ORDERING_FIELD) + ", " +
+            record.get(SchemaUtils.TIMESTAMP_FIELD) + ", " + record.get(SchemaUtils.ROW_KEY_FIELD) +
+            ", " + record.get(SchemaUtils.BEGIN_LAT_FIELD));
         return record;
       });
       deletes.persist(StorageLevel.DISK_ONLY());

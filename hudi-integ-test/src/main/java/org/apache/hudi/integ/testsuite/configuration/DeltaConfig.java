@@ -139,6 +139,10 @@ public class DeltaConfig implements Serializable {
       return new Builder();
     }
 
+    public String getNodeName() {
+      return (String) configsMap.getOrDefault(NODE_NAME, "");
+    }
+
     public long getNumRecordsInsert() {
       return Long.valueOf(configsMap.getOrDefault(NUM_RECORDS_INSERT, 0).toString());
     }

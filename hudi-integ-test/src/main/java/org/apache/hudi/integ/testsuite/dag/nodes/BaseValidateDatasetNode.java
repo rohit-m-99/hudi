@@ -108,7 +108,7 @@ public abstract class BaseValidateDatasetNode extends DagNode<Boolean> {
         if (exceptInputCount != 0 || exceptHudiCount != 0) {
           log.error("Data set validation failed. Total count in hudi " + trimmedHudiDf.count() + ", input df count " + inputSnapshotDf.count()
               + ". InputDf except hudi df = " + exceptInputCount + ", Hudi df except Input df " + exceptHudiCount);
-          throw new AssertionError("Hudi contents does not match contents input data. ");
+          throw new AssertionError("Hudi contents does not match contents input data for full data validation. ");
         }
       } else {
         Dataset<Row> intersectionDf = inputSnapshotDf.intersect(trimmedHudiDf);
@@ -118,6 +118,16 @@ public abstract class BaseValidateDatasetNode extends DagNode<Boolean> {
         // the intersected df should be same as inputDf. if not, there is some mismatch.
         if (outputCount == 0 || inputCount == 0 || inputSnapshotDf.except(intersectionDf).count() != 0) {
           log.error("Data set validation failed. Total count in hudi " + outputCount + ", input df count " + inputCount);
+          List<Row> inputSnapshotDfRows = inputSnapshotDf.collectAsList();
+          List<Row> trimmedHudiDfRows = trimmedHudiDf.collectAsList();
+          log.warn("XXX Input Rows ");
+          inputSnapshotDfRows.forEach(entry -> log.warn(" XXX Input Rec: " +entry.getAs(SchemaUtils.SOURCE_ORDERING_FIELD) + ", " +
+              entry.getAs(SchemaUtils.TIMESTAMP_FIELD) + ", " + entry.getAs(SchemaUtils.ROW_KEY_FIELD) +
+              ", " + entry.getAs(SchemaUtils.BEGIN_LAT_FIELD)));
+          log.warn("XXX Hudi Rows ");
+          trimmedHudiDfRows.forEach(entry -> log.warn(" XXX Hudi Rec: " +entry.getAs(SchemaUtils.SOURCE_ORDERING_FIELD) + ", " +
+              entry.getAs(SchemaUtils.TIMESTAMP_FIELD) + ", " + entry.getAs(SchemaUtils.ROW_KEY_FIELD) +
+              ", " + entry.getAs(SchemaUtils.BEGIN_LAT_FIELD)));
           throw new AssertionError("Hudi contents does not match contents input data. ");
         }
 

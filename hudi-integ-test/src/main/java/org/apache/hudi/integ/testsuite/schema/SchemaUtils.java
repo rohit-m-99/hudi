@@ -21,5 +21,7 @@ package org.apache.hudi.integ.testsuite.schema;
 public class SchemaUtils {
 
   public static final String SOURCE_ORDERING_FIELD = "test_suite_source_ordering_field";
-
+  public static final String TIMESTAMP_FIELD = "timestamp";
+  public static final String ROW_KEY_FIELD = "_row_key";
+  public static final String BEGIN_LAT_FIELD = "begin_lat";
 }

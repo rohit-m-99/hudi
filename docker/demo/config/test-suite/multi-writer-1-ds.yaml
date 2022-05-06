@@ -19,42 +19,42 @@ dag_intermittent_delay_mins: 0
 dag_content:
   first_insert:
     config:
-      record_size: 5000
+      record_size: 200
       num_partitions_insert: 1
       repeat_count: 1
-      num_records_insert: 1000
+      num_records_insert: 5
     type: InsertNode
     deps: none
   second_insert:
     config:
-      record_size: 1000
+      record_size: 200
       num_partitions_insert: 1
       repeat_count: 1
-      num_records_insert: 100000
+      num_records_insert: 5
     deps: first_insert
     type: InsertNode
   third_insert:
     config:
-      record_size: 1000
+      record_size: 200
       num_partitions_insert: 1
       repeat_count: 1
-      num_records_insert: 30000
+      num_records_insert: 10
     deps: second_insert
     type: InsertNode
   first_upsert:
     config:
-      record_size: 1000
+      record_size: 200
       num_partitions_insert: 1
-      num_records_insert: 5000
+      num_records_insert: 5
       repeat_count: 1
-      num_records_upsert: 50000
+      num_records_upsert: 10
       num_partitions_upsert: 1
     type: UpsertNode
     deps: third_insert
   first_delete:
     config:
       num_partitions_delete : 0
-      num_records_delete: 100000
+      num_records_delete: 10
     type: DeleteNode
     deps: first_upsert
   second_validate:

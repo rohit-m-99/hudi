@@ -19,20 +19,20 @@ dag_intermittent_delay_mins: 1
 dag_content:
   first_insert:
     config:
-      record_size: 1000
+      record_size: 200
       num_partitions_insert: 1
       repeat_count: 1
-      num_records_insert: 100000
+      num_records_insert: 5
       start_partition: 10
     type: SparkInsertNode
     deps: none
   first_upsert:
     config:
-      record_size: 1000
+      record_size: 200
       num_partitions_insert: 1
-      num_records_insert: 50000
+      num_records_insert: 5
       repeat_count: 1
-      num_records_upsert: 50000
+      num_records_upsert: 5
       num_partitions_upsert: 1
       start_partition: 10
     type: SparkUpsertNode
@@ -40,7 +40,7 @@ dag_content:
   first_delete:
     config:
       num_partitions_delete: 0
-      num_records_delete: 10000
+      num_records_delete: 5
       start_partition: 10
     type: SparkDeleteNode
     deps: first_upsert
