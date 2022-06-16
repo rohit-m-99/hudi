@@ -98,6 +98,34 @@ class TestCOWDataSource extends HoodieClientTestBase {
     assertTrue(HoodieDataSourceHelpers.hasNewCommits(fs, basePath, "000"))
   }
 
+
+  @Test def testDeltaSync() {
+    // Insert Operation
+    val insertRecords = dataGen.generateInserts("000", 100)
+    val records = recordsToStrings(insertRecords).toList
+    val inputDF = spark.read.json(spark.sparkContext.parallelize(records, 2))
+    inputDF.write.format("hudi")
+      .options(commonOpts)
+      .option(DataSourceWriteOptions.OPERATION.key, DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL)
+      .option(DataSourceWriteOptions.META_SYNC_ENABLED.key(),"true")
+      .option(DataSourceWriteOptions.META_SYNC_CLIENT_TOOL_CLASS_NAME.key(), "org.apache.hudi.delta.sync.DeltaSync")
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
+
+    assertTrue(HoodieDataSourceHelpers.hasNewCommits(fs, basePath, "000"))
+
+    val records1 = recordsToStrings(dataGen.generateUpdates("001", insertRecords)).toList
+    val inputDF1 = spark.read.json(spark.sparkContext.parallelize(records1, 2))
+    inputDF1.write.format("hudi")
+      .options(commonOpts)
+      .option(DataSourceWriteOptions.META_SYNC_ENABLED.key(),"true")
+      .option(DataSourceWriteOptions.META_SYNC_CLIENT_TOOL_CLASS_NAME.key(), "org.apache.hudi.delta.sync.DeltaSync")
+      .mode(SaveMode.Append)
+      .save(basePath)
+
+    assertTrue(HoodieDataSourceHelpers.hasNewCommits(fs, basePath, "001"))
+  }
+
   /**
    * This tests the case that query by with a specified partition condition on hudi table which is
    * different between the value of the partition field and the actual partition path,
