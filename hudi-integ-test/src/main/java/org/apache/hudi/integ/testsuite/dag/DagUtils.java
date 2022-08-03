@@ -52,6 +52,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hudi.integ.testsuite.configuration.DeltaConfig.Config.CONFIG_NAME;
 import static org.apache.hudi.integ.testsuite.configuration.DeltaConfig.Config.HIVE_PROPERTIES;
 import static org.apache.hudi.integ.testsuite.configuration.DeltaConfig.Config.HIVE_QUERIES;
@@ -66,6 +69,7 @@ import static org.apache.hudi.integ.testsuite.configuration.DeltaConfig.Config.T
  */
 public class DagUtils {
 
+  protected static Logger log = LoggerFactory.getLogger(DagUtils.class);
   public static final String DAG_NAME = "dag_name";
   public static final String DAG_ROUNDS = "dag_rounds";
   public static final String DAG_INTERMITTENT_DELAY_MINS = "dag_intermittent_delay_mins";
@@ -198,6 +202,7 @@ public class DagUtils {
     Iterator<Entry<String, JsonNode>> itr = node.get(CONFIG_NAME).fields();
     while (itr.hasNext()) {
       Entry<String, JsonNode> entry = itr.next();
+      log.info("Node:: " + entry.getKey());
       switch (entry.getKey()) {
         /*case HIVE_QUERIES:
           configsMap.put(HIVE_QUERIES, getQueries(entry));
@@ -206,15 +211,19 @@ public class DagUtils {
           configsMap.put(HIVE_PROPERTIES, getQuerySessionProperties(entry));
           break;*/
         case HIVE_QUERIES:
+          log.info("Hive query");
           configsMap.put(HIVE_QUERIES, getQueries(entry));
           break;
         case HIVE_PROPERTIES:
+          log.info("Hive properties");
           configsMap.put(HIVE_PROPERTIES, getQuerySessionProperties(entry));
           break;
         case PRESTO_QUERIES:
+          log.info("Presto query");
           configsMap.put(PRESTO_QUERIES, getQueries(entry));
           break;
         case PRESTO_PROPERTIES:
+          log.info("presto property ");
           configsMap.put(PRESTO_PROPERTIES, getQuerySessionProperties(entry));
           break;
         case TRINO_QUERIES:
@@ -229,32 +238,6 @@ public class DagUtils {
       }
     }
     return configsMap;
-  }
-
-  private static List<Pair<String, Integer>> getQueries(Entry<String, JsonNode> entry) {
-    List<Pair<String, Integer>> queries = new ArrayList<>();
-    try {
-      List<JsonNode> flattened = new ArrayList<>();
-      flattened.add(entry.getValue());
-      queries = (List<Pair<String, Integer>>) getQueryMapper().readValue(flattened.toString(), List.class);
-    }
-    catch (Exception e) {
-      e.printStackTrace();
-    }
-    return queries;
-  }
-
-  private static List<String> getQuerySessionProperties(Entry<String, JsonNode> entry) {
-    List<String> properties = new ArrayList<>();
-    try {
-      List<JsonNode> flattened = new ArrayList<>();
-      flattened.add(entry.getValue());
-      properties = (List<String>) getQueryEnginePropertyMapper().readValue(flattened.toString(), List.class);
-    }
-    catch (Exception e) {
-      e.printStackTrace();
-    }
-    return properties;
   }
 
   private static Object getValue(JsonNode node) {
@@ -334,6 +317,8 @@ public class DagUtils {
     catch (Exception e) {
       e.printStackTrace();
     }
+    log.info("Queries :: ");
+    queries.forEach(entry1 -> log.info("Entry : " + entry1.getKey() + " : " + entry1.getValue()));
     return queries;
   }
 
@@ -347,6 +332,9 @@ public class DagUtils {
     catch (Exception e) {
       e.printStackTrace();
     }
+    log.info("Properties :: ");
+    properties.forEach(entry1 -> log.info("Property : " + entry1));
+
     return properties;
   }
 
