@@ -23,7 +23,7 @@
     "name" : "timestamp",
     "type" : "long"
   }, {
-    "name" : "_row_key",
+    "name" : "row_key",
     "type" : "string"
   }, {
     "name" : "rider",

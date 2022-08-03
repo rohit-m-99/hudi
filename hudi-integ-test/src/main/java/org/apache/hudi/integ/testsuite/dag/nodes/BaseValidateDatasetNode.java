@@ -142,9 +142,9 @@ public abstract class BaseValidateDatasetNode extends DagNode<Boolean> {
           String tableName = context.getWriterContext().getProps().getString(DataSourceWriteOptions.HIVE_TABLE().key());
           log.warn("Validating hive table with db : " + database + " and table : " + tableName);
           session.sql("REFRESH TABLE " + database + "." + tableName);
-          Dataset<Row> cowDf = session.sql("SELECT _row_key, rider, driver, begin_lat, begin_lon, end_lat, end_lon, fare, _hoodie_is_deleted, " +
+          Dataset<Row> cowDf = session.sql("SELECT row_key, rider, driver, begin_lat, begin_lon, end_lat, end_lon, fare, _hoodie_is_deleted, " +
               "test_suite_source_ordering_field FROM " + database + "." + tableName);
-          Dataset<Row> reorderedInputDf = inputSnapshotDf.select("_row_key", "rider", "driver", "begin_lat", "begin_lon", "end_lat", "end_lon", "fare",
+          Dataset<Row> reorderedInputDf = inputSnapshotDf.select("row_key", "rider", "driver", "begin_lat", "begin_lon", "end_lat", "end_lon", "fare",
               "_hoodie_is_deleted", "test_suite_source_ordering_field");
 
           Dataset<Row> intersectedHiveDf = reorderedInputDf.intersect(cowDf);

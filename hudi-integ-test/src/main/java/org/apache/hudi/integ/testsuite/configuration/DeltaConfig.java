@@ -118,7 +118,7 @@ public class DeltaConfig implements Serializable {
     private static String PARTITION_FIELD = "partition_field";
     // Spark SQL Merge
     private static String MERGE_CONDITION = "merge_condition";
-    private static String DEFAULT_MERGE_CONDITION = "target._row_key = source._row_key";
+    private static String DEFAULT_MERGE_CONDITION = "target.row_key = source.row_key";
     private static String MERGE_MATCHED_ACTION = "matched_action";
     private static String DEFAULT_MERGE_MATCHED_ACTION = "update set *";
     private static String MERGE_NOT_MATCHED_ACTION = "not_matched_action";
