@@ -199,6 +199,12 @@ public class DagUtils {
     while (itr.hasNext()) {
       Entry<String, JsonNode> entry = itr.next();
       switch (entry.getKey()) {
+        /*case HIVE_QUERIES:
+          configsMap.put(HIVE_QUERIES, getQueries(entry));
+          break;
+        case HIVE_PROPERTIES:
+          configsMap.put(HIVE_PROPERTIES, getQuerySessionProperties(entry));
+          break;*/
         case HIVE_QUERIES:
           configsMap.put(HIVE_QUERIES, getQueries(entry));
           break;
@@ -293,7 +299,7 @@ public class DagUtils {
           break;
         case PRESTO_PROPERTIES:
           ((ObjectNode) configNode).put(PRESTO_PROPERTIES,
-              MAPPER.readTree(getQueryEnginePropertyMapper().writeValueAsString(node.getConfig().getHiveProperties())));
+              MAPPER.readTree(getQueryEnginePropertyMapper().writeValueAsString(node.getConfig().getPrestoProperties())));
           break;
         case TRINO_QUERIES:
           ((ObjectNode) configNode).put(TRINO_QUERIES,
@@ -301,7 +307,7 @@ public class DagUtils {
           break;
         case TRINO_PROPERTIES:
           ((ObjectNode) configNode).put(TRINO_PROPERTIES,
-              MAPPER.readTree(getQueryEnginePropertyMapper().writeValueAsString(node.getConfig().getHiveProperties())));
+              MAPPER.readTree(getQueryEnginePropertyMapper().writeValueAsString(node.getConfig().getTrinoProperties())));
           break;
         default:
           break;
@@ -316,6 +322,32 @@ public class DagUtils {
     }
     ((ObjectNode) jsonNode).put(DeltaConfig.Config.DEPENDENCIES, dependencyNames);
     return jsonNode;
+  }
+
+  private static List<Pair<String, Integer>> getQueries(Entry<String, JsonNode> entry) {
+    List<Pair<String, Integer>> queries = new ArrayList<>();
+    try {
+      List<JsonNode> flattened = new ArrayList<>();
+      flattened.add(entry.getValue());
+      queries = (List<Pair<String, Integer>>) getQueryMapper().readValue(flattened.toString(), List.class);
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+    }
+    return queries;
+  }
+
+  private static List<String> getQuerySessionProperties(Entry<String, JsonNode> entry) {
+    List<String> properties = new ArrayList<>();
+    try {
+      List<JsonNode> flattened = new ArrayList<>();
+      flattened.add(entry.getValue());
+      properties = (List<String>) getQueryEnginePropertyMapper().readValue(flattened.toString(), List.class);
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+    }
+    return properties;
   }
 
   private static String getDependencyNames(DagNode node) {

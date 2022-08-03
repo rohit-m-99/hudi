@@ -19,6 +19,7 @@
 package org.apache.hudi.integ.testsuite.dag.nodes;
 
 import org.apache.hudi.common.config.TypedProperties;
+import org.apache.hudi.common.util.collection.Pair;
 import org.apache.hudi.exception.HoodieValidationException;
 import org.apache.hudi.hive.HiveSyncConfig;
 import org.apache.hudi.integ.testsuite.configuration.DeltaConfig;
@@ -64,6 +65,10 @@ public class HiveQueryNode extends BaseQueryNode {
       Statement stmt = con.createStatement();
       stmt.execute("set hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat");
       setSessionProperties(this.config.getHiveProperties(), stmt);
+      log.info("printing hive query:: ");
+      for (Pair<String, Integer> hiveProperty : config.getHiveQueries()) {
+        log.info("Hive query " + hiveProperty.getKey() + " : " + hiveProperty.getValue());
+      }
       executeAndValidateQueries(this.config.getHiveQueries(), stmt);
       stmt.close();
       this.hiveServiceProvider.stopLocalHiveServiceIfNeeded();

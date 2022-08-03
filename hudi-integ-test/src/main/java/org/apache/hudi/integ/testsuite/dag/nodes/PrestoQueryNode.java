@@ -19,6 +19,7 @@
 package org.apache.hudi.integ.testsuite.dag.nodes;
 
 import org.apache.hudi.common.util.StringUtils;
+import org.apache.hudi.common.util.collection.Pair;
 import org.apache.hudi.exception.HoodieValidationException;
 import org.apache.hudi.integ.testsuite.configuration.DeltaConfig;
 import org.apache.hudi.integ.testsuite.dag.ExecutionContext;
@@ -50,6 +51,10 @@ public class PrestoQueryNode extends BaseQueryNode {
     try (Connection connection = DriverManager.getConnection(url, user, pass)) {
       Statement stmt = connection.createStatement();
       setSessionProperties(this.config.getPrestoProperties(), stmt);
+      log.info("printing Presto query:: ");
+      for (Pair<String, Integer> hiveProperty : config.getPrestoQueries()) {
+        log.info("Hive query " + hiveProperty.getKey() + " : " + hiveProperty.getValue());
+      }
       executeAndValidateQueries(this.config.getPrestoQueries(), stmt);
       stmt.close();
     }
