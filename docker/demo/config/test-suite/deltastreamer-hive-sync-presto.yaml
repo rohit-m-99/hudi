@@ -74,7 +74,7 @@ dag_content:
       trino_queries:
         query1: "select count(*) from testdb.table1"
         result1: 400
-        query2: "select count(*) from testdb.table1 group   by `_row_key` having count(*) > 1"
+        query2: "select count(*) from testdb.table1 group   by _row_key having count(*) > 1"
         result2: 0
     type: TrinoQueryNode
     deps: first_presto_query
