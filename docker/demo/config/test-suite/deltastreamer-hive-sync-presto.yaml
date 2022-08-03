@@ -56,28 +56,6 @@ dag_content:
       engine: "mr"
     type: HiveSyncNode
     deps: first_upsert
-  first_presto_query:
-    config:
-      presto_props:
-        prop1: "SET SESSION hive.parquet_use_column_names = true"
-      presto_queries:
-        query1: "select count(*) from testdb.table1"
-        result1: 400
-        query2: "select count(*) from testdb.table1 group by _row_key having count(*) > 1"
-        result2: 0
-    type: PrestoQueryNode
-    deps: first_hive_sync
-  first_trino_query:
-    config:
-      trino_props:
-        prop1: "SET SESSION hive.parquet_use_column_names = true"
-      trino_queries:
-        query1: "select count(*) from testdb.table1"
-        result1: 400
-        query2: "select count(*) from testdb.table1 group   by _row_key having count(*) > 1"
-        result2: 0
-    type: TrinoQueryNode
-    deps: first_presto_query
   first_hive_query:
     config:
       hive_props:
@@ -88,4 +66,4 @@ dag_content:
         query2: "select count(*) from testdb1.table1 group   by `_row_key` having count(*) > 1"
         result2: 0
     type: HiveQueryNode
-    deps: first_trino_query
+    deps: first_hive_sync
