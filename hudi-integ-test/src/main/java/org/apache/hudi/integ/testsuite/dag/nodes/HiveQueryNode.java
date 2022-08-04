@@ -48,6 +48,7 @@ public class HiveQueryNode extends BaseQueryNode {
 
   @Override
   public void execute(ExecutionContext executionContext, int curItrCount) throws Exception {
+
     log.info("Executing hive query node {}", this.getName());
     this.hiveServiceProvider.startLocalHiveServiceIfNeeded(executionContext.getHoodieTestSuiteWriter().getConfiguration());
     TypedProperties properties = new TypedProperties();
@@ -61,10 +62,11 @@ public class HiveQueryNode extends BaseQueryNode {
     try {
       Class.forName("org.apache.hudi.org.apache.hive.jdbc.HiveDriver");
     } catch (ClassNotFoundException e) {
-      throw new HoodieValidationException("Hive query validation failed due to " + e.getMessage(), e);
+      throw new HoodieValidationException("111 Hive query validation failed due to " + e.getMessage(), e);
     }
+    log.info("HIVE url :: " + hiveSyncConfig.getString(HIVE_URL) + ", ");
     // this.hiveServiceProvider.syncToLocalHiveIfNeeded(executionContext.getHoodieTestSuiteWriter());
-    try (Connection con = DriverManager.getConnection(hiveSyncConfig.getString(HIVE_URL),
+    try (Connection con = DriverManager.getConnection("jdbc:hive2://hiveserver:10000/",
         hiveSyncConfig.getString(HIVE_USER), hiveSyncConfig.getString(HIVE_PASS))) {
       Statement stmt = con.createStatement();
       stmt.execute("set hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat");
@@ -74,7 +76,7 @@ public class HiveQueryNode extends BaseQueryNode {
       this.hiveServiceProvider.stopLocalHiveServiceIfNeeded();
     }
     catch (Exception e) {
-      throw new HoodieValidationException("Hive query validation failed due to " + e.getMessage(), e);
+      throw new HoodieValidationException("222 Hive query validation failed due to " + e.getMessage(), e);
     }
   }
 }
