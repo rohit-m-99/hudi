@@ -59,7 +59,7 @@ public class HiveQueryNode extends BaseQueryNode {
         .getDeltaSyncService().getDeltaSync().getCfg().baseFileFormat);
     HiveSyncConfig hiveSyncConfig = new HiveSyncConfig(properties);
     try {
-      Class.forName("org.apache.hive.jdbc.HiveDriver");
+      Class.forName("org.apache.hudi.org.apache.hive.jdbc.HiveDriver");
     } catch (ClassNotFoundException e) {
       throw new HoodieValidationException("Hive query validation failed due to " + e.getMessage(), e);
     }
