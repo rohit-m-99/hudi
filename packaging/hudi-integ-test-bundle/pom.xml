@@ -308,6 +308,10 @@
                   <pattern>org.apache.parquet.avro.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.parquet.avro.</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>org.apache.logging.log4j.core.</pattern>
+                  <shadedPattern>org.apache.hudi.org.apache.logging.log4j.core.</shadedPattern>
+                </relocation>
                 <!-- The classes below in org.apache.hadoop.metrics2 package come from
                 hbase-hadoop-compat and hbase-hadoop2-compat, which have to be shaded one by one,
                 instead of shading all classes under org.apache.hadoop.metrics2 including ones
