@@ -61,9 +61,9 @@ dag_content:
       hive_props:
         prop1: "set hive.input.format = org.apache.hudi.hadoop.HoodieParquetInputFormat"
       hive_queries:
-        query1: "select count(*) from testdb1.table1"
+        query1: "select count(*) from testdb.table1"
         result1: 400
-        query2: "select count(*) from testdb1.table1 group by `_row_key` having count(*) > 1"
+        query2: "select count(*) from testdb.table1 group by `_row_key` having count(*) > 1"
         result2: 0
     type: HiveQueryNode
     deps: first_hive_sync
