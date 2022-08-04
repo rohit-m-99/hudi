@@ -78,9 +78,3 @@ dag_content:
         result2: 0
     type: HiveQueryNode
     deps: first_presto_query
-  second_hive_sync:
-    config:
-      queue_name: "adhoc"
-      engine: "mr"
-    type: HiveSyncNode
-    deps: first_hive_query

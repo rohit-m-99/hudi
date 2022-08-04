@@ -47,7 +47,7 @@ public class TestDagUtils {
   }
 
   @Test
-  @Disabled
+  //@Disabled
   // TODO(HUDI-3668): Fix this test
   public void testConvertDagToYamlHiveQuery() throws Exception {
     WorkflowDag dag = new HiveSyncDagGenerator().build();

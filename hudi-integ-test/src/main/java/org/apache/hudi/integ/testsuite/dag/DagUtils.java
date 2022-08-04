@@ -276,6 +276,7 @@ public class DagUtils {
         case HIVE_PROPERTIES:
           ((ObjectNode) configNode).put(HIVE_PROPERTIES,
               MAPPER.readTree(getQueryEnginePropertyMapper().writeValueAsString(node.getConfig().getHiveProperties())));
+          break;
         case PRESTO_QUERIES:
           ((ObjectNode) configNode).put(PRESTO_QUERIES,
               MAPPER.readTree(getQueryMapper().writeValueAsString(node.getConfig().getHiveQueries())));

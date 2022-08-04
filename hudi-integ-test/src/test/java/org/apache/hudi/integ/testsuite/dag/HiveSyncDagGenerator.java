@@ -47,6 +47,7 @@ public class HiveSyncDagGenerator implements WorkflowDagGenerator {
 
     DagNode child2 = new HiveQueryNode(Config.newBuilder().withHiveQueryAndResults(Arrays
         .asList(Pair.of("select " + "count(*) from testdb1.table1 group " + "by rider having count(*) < 1", 0)))
+        .withHiveProperties(Arrays.asList(new String[]{"random property1, random property2"}))
         .build());
     child1.addChildNode(child2);
 
