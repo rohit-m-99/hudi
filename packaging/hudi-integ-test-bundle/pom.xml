@@ -236,10 +236,10 @@
                   <pattern>org.apache.hive.common.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.hive.common.</shadedPattern>
                 </relocation>
-                <!--relocation>
+                <relocation>
                   <pattern>org.apache.hadoop.hive.common.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.hadoop.hive.common.</shadedPattern>
-                </relocation-->
+                </relocation>
                 <relocation>
                   <pattern>org.apache.hadoop.hive.shims.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.hadoop.hive.shims.</shadedPattern>
