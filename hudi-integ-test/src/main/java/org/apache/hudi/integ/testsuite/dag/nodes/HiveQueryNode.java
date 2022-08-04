@@ -58,6 +58,11 @@ public class HiveQueryNode extends BaseQueryNode {
     properties.put(HoodieSyncConfig.META_SYNC_BASE_FILE_FORMAT.key(), executionContext.getHoodieTestSuiteWriter().getDeltaStreamerWrapper()
         .getDeltaSyncService().getDeltaSync().getCfg().baseFileFormat);
     HiveSyncConfig hiveSyncConfig = new HiveSyncConfig(properties);
+    try {
+      Class.forName("org.apache.hive.jdbc.HiveDriver");
+    } catch (ClassNotFoundException e) {
+      throw new HoodieValidationException("Hive query validation failed due to " + e.getMessage(), e);
+    }
     // this.hiveServiceProvider.syncToLocalHiveIfNeeded(executionContext.getHoodieTestSuiteWriter());
     try (Connection con = DriverManager.getConnection(hiveSyncConfig.getString(HIVE_URL),
         hiveSyncConfig.getString(HIVE_USER), hiveSyncConfig.getString(HIVE_PASS))) {
