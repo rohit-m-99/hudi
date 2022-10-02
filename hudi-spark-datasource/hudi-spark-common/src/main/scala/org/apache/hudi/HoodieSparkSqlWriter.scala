@@ -33,8 +33,8 @@ import org.apache.hudi.common.table.timeline.HoodieActiveTimeline
 import org.apache.hudi.common.table.{HoodieTableConfig, HoodieTableMetaClient, TableSchemaResolver}
 import org.apache.hudi.common.util.{CommitUtils, StringUtils}
 import org.apache.hudi.config.HoodieBootstrapConfig.{BASE_PATH, INDEX_CLASS_NAME, KEYGEN_CLASS_NAME}
-import org.apache.hudi.config.{HoodieInternalConfig, HoodieWriteConfig}
-import org.apache.hudi.exception.HoodieException
+import org.apache.hudi.config.{HoodieInternalConfig, HoodieLockConfig, HoodieWriteConfig}
+import org.apache.hudi.exception.{HoodieException, HoodieWriteConflictException}
 import org.apache.hudi.execution.bulkinsert.{BulkInsertInternalPartitionerWithRowsFactory, NonSortPartitionerWithRows}
 import org.apache.hudi.hive.{HiveSyncConfigHolder, HiveSyncTool}
 import org.apache.hudi.index.SparkHoodieIndexFactory
@@ -75,6 +75,44 @@ object HoodieSparkSqlWriter {
             hoodieWriteClient: Option[SparkRDDWriteClient[HoodieRecordPayload[Nothing]]] = Option.empty,
             asyncCompactionTriggerFn: Option[SparkRDDWriteClient[HoodieRecordPayload[Nothing]] => Unit] = Option.empty,
             asyncClusteringTriggerFn: Option[SparkRDDWriteClient[HoodieRecordPayload[Nothing]] => Unit] = Option.empty)
+  : (Boolean, common.util.Option[String], common.util.Option[String], common.util.Option[String],
+    SparkRDDWriteClient[HoodieRecordPayload[Nothing]], HoodieTableConfig) = {
+    var succeeded = false
+    var counter = 0
+    val isRetryEnabled : Boolean = java.lang.Boolean.parseBoolean(optParams.getOrDefault(HoodieLockConfig.RETRY_ON_CONFLICT_FAILURES.key(), String.valueOf(HoodieLockConfig.RETRY_ON_CONFLICT_FAILURES.defaultValue())))
+    val maxRetry : Integer = Integer.parseInt(optParams.getOrDefault(HoodieLockConfig.NUM_RETRIES_ON_CONFLICT_FAILURES.key(), String.valueOf(HoodieLockConfig.NUM_RETRIES_ON_CONFLICT_FAILURES.defaultValue())))
+    var toReturn : (Boolean, org.apache.hudi.common.util.Option[String], org.apache.hudi.common.util.Option[String], org.apache.hudi.common.util.Option[String], org.apache.hudi.client.SparkRDDWriteClient[org.apache.hudi.common.model.HoodieRecordPayload[Nothing]], org.apache.hudi.common.table.HoodieTableConfig) = null
+    // if retries are enabled on conflict failures, enable retries
+    while(counter < maxRetry && !succeeded) {
+      try {
+        counter += 1
+        toReturn = writeInternal(sqlContext, mode, optParams, df, hoodieTableConfigOpt, hoodieWriteClient, asyncCompactionTriggerFn, asyncClusteringTriggerFn)
+        log.warn("Succeeded with attempt no " + counter)
+        succeeded = true
+        toReturn
+      } catch {
+        case e: HoodieWriteConflictException => {
+          val writeConcurrencyMode = optParams.getOrDefault(HoodieWriteConfig.WRITE_CONCURRENCY_MODE.key(), HoodieWriteConfig.WRITE_CONCURRENCY_MODE.defaultValue())
+          if (writeConcurrencyMode.equals(WriteConcurrencyMode.OPTIMISTIC_CONCURRENCY_CONTROL.value()) && isRetryEnabled) {
+            log.warn("Conflict found. Retrying again for attempt no " + counter)
+          } else {
+            throw e
+          }
+        }
+      }
+    }
+    toReturn
+  }
+
+  def writeInternal(sqlContext: SQLContext,
+            mode: SaveMode,
+            optParams: Map[String, String],
+            df: DataFrame,
+            hoodieTableConfigOpt: Option[HoodieTableConfig] = Option.empty,
+            hoodieWriteClient: Option[SparkRDDWriteClient[HoodieRecordPayload[Nothing]]] = Option.empty,
+            asyncCompactionTriggerFn: Option[SparkRDDWriteClient[HoodieRecordPayload[Nothing]] => Unit] = Option.empty,
+            asyncClusteringTriggerFn: Option[SparkRDDWriteClient[HoodieRecordPayload[Nothing]] => Unit] = Option.empty
+            )
   : (Boolean, common.util.Option[String], common.util.Option[String], common.util.Option[String],
     SparkRDDWriteClient[HoodieRecordPayload[Nothing]], HoodieTableConfig) = {
 

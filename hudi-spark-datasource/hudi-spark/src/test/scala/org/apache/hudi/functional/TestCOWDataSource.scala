@@ -25,10 +25,10 @@ import org.apache.hudi.common.model.HoodieRecord
 import org.apache.hudi.common.table.timeline.HoodieInstant
 import org.apache.hudi.common.table.{HoodieTableConfig, HoodieTableMetaClient, TableSchemaResolver}
 import org.apache.hudi.common.testutils.HoodieTestDataGenerator
-import org.apache.hudi.common.testutils.RawTripTestPayload.{deleteRecordsToStrings, recordsToStrings}
+import org.apache.hudi.common.testutils.RawTripTestPayload.{deleteRecordsToStrings, recordToString, recordsToStrings}
 import org.apache.hudi.common.util
 import org.apache.hudi.common.util.PartitionPathEncodeUtils.DEFAULT_PARTITION_PATH
-import org.apache.hudi.config.HoodieWriteConfig
+import org.apache.hudi.config.{HoodieLockConfig, HoodieWriteConfig}
 import org.apache.hudi.config.metrics.HoodieMetricsConfig
 import org.apache.hudi.exception.{HoodieException, HoodieUpsertException}
 import org.apache.hudi.keygen._
@@ -50,6 +50,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{CsvSource, ValueSource}
 
 import java.sql.{Date, Timestamp}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.function.Consumer
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -272,6 +273,69 @@ class TestCOWDataSource extends HoodieClientTestBase {
     val snapshotDF2 = spark.read.format("org.apache.hudi")
       .load(basePath + "/*/*/*/*")
     assertEquals(snapshotDF2.count(), 80)
+  }
+
+  /**
+   * Test retries on conflict failures.
+   * @param enableRetries
+   */
+  @ParameterizedTest
+  @ValueSource(booleans = Array(true, false))
+  def testCopyOnWriteConcurrentUpdates(enableRetries: Boolean): Unit = {
+    initTestDataGenerator()
+    val records1 = recordsToStrings(dataGen.generateInserts("000", 1000)).toList
+    val inputDF1 = spark.read.json(spark.sparkContext.parallelize(records1, 2))
+    inputDF1.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .option("hoodie.write.concurrency.mode","optimistic_concurrency_control")
+      .option("hoodie.cleaner.policy.failed.writes","LAZY")
+      .option("hoodie.write.lock.provider","org.apache.hudi.client.transaction.lock.InProcessLockProvider")
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
+
+    val snapshotDF1 = spark.read.format("org.apache.hudi")
+      .load(basePath + "/*/*/*/*")
+    assertEquals(1000, snapshotDF1.count())
+
+    val countDownLatch = new CountDownLatch(2)
+    for (x <- 1 to 2) {
+      val thread = new Thread(new UpdateThread(dataGen , spark, commonOpts, basePath, x + "00", countDownLatch, enableRetries))
+      thread.setName((x + "00_THREAD").toString())
+      thread.start()
+    }
+    countDownLatch.await(1, TimeUnit.MINUTES)
+
+    val snapshotDF2 = spark.read.format("org.apache.hudi")
+      .load(basePath + "/*/*/*/*")
+    if (enableRetries) {
+      assertEquals(snapshotDF2.count(), 3000)
+      assertEquals(HoodieDataSourceHelpers.listCommitsSince(fs, basePath, "000").size(), 3)
+    } else {
+      // only one among two threads will succeed and hence 2000
+      assertEquals(snapshotDF2.count(), 2000)
+      assertEquals(HoodieDataSourceHelpers.listCommitsSince(fs, basePath, "000").size(), 2)
+    }
+  }
+
+  class UpdateThread(dataGen: HoodieTestDataGenerator, spark: SparkSession, commonOpts: Map[String, String], basePath: String,
+                     instantTime: String, countDownLatch: CountDownLatch, enableRetries: Boolean) extends Runnable
+  {
+    override def run()
+    {
+      val updateRecs = recordsToStrings(dataGen.generateUniqueUpdates(instantTime, 500)).toList
+      val insertRecs = recordsToStrings(dataGen.generateInserts(instantTime, 1000)).toList
+      val updateDf = spark.read.json(spark.sparkContext.parallelize(updateRecs , 2))
+      val insertDf = spark.read.json(spark.sparkContext.parallelize(insertRecs , 2))
+      updateDf.union(insertDf).write.format("org.apache.hudi")
+        .options(commonOpts)
+        .option("hoodie.write.concurrency.mode","optimistic_concurrency_control")
+        .option("hoodie.cleaner.policy.failed.writes","LAZY")
+        .option("hoodie.write.lock.provider","org.apache.hudi.client.transaction.lock.InProcessLockProvider")
+        .option(HoodieLockConfig.RETRY_ON_CONFLICT_FAILURES.key(), String.valueOf(enableRetries))
+        .mode(SaveMode.Append)
+        .save(basePath)
+      countDownLatch.countDown()
+    }
   }
 
   @Test def testOverWriteModeUseReplaceAction(): Unit = {
