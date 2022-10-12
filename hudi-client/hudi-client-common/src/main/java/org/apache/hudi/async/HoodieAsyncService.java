@@ -73,6 +73,10 @@ public abstract class HoodieAsyncService implements Serializable {
     this.runInDaemonMode = runInDaemonMode;
   }
 
+  protected String getIdentifier() {
+    return "";
+  }
+
   public boolean isStarted() {
     return started;
   }
@@ -211,7 +215,7 @@ public abstract class HoodieAsyncService implements Serializable {
    * @throws InterruptedException
    */
   HoodieInstant fetchNextAsyncServiceInstant() throws InterruptedException {
-    LOG.info(String.format("Waiting for next instant up to %d seconds", POLLING_SECONDS));
+    LOG.info(String.format(getIdentifier() + " Waiting for next instant up to %d seconds", POLLING_SECONDS));
     HoodieInstant instant = pendingInstants.poll(POLLING_SECONDS, TimeUnit.SECONDS);
     if (instant != null) {
       try {

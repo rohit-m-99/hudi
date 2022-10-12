@@ -22,6 +22,7 @@ import org.apache.hudi.SparkConfigs;
 import org.apache.hudi.async.AsyncCompactService;
 import org.apache.hudi.common.model.HoodieTableType;
 import org.apache.hudi.common.util.Option;
+import org.apache.hudi.utilities.CompactTableService;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -81,6 +82,26 @@ public class SchedulerConfGenerator {
    * @param cfg Config for HoodieDeltaStreamer
    */
   public static Map<String, String> getSparkSchedulingConfigs(HoodieDeltaStreamer.Config cfg) throws Exception {
+    scala.Option<String> scheduleModeKeyOption = new SparkConf().getOption(SPARK_SCHEDULER_MODE_KEY);
+    final Option<String> sparkSchedulerMode =
+        scheduleModeKeyOption.isDefined() ? Option.of(scheduleModeKeyOption.get()) : Option.empty();
+
+    Map<String, String> additionalSparkConfigs = new HashMap<>(1);
+    if (sparkSchedulerMode.isPresent() && SPARK_SCHEDULER_FAIR_MODE.equals(sparkSchedulerMode.get())
+        && cfg.continuousMode && cfg.tableType.equals(HoodieTableType.MERGE_ON_READ.name())) {
+      String sparkSchedulingConfFile = generateAndStoreConfig(cfg.deltaSyncSchedulingWeight,
+          cfg.compactSchedulingWeight, cfg.deltaSyncSchedulingMinShare, cfg.compactSchedulingMinShare,
+          cfg.clusterSchedulingWeight, cfg.clusterSchedulingMinShare);
+      LOG.warn("Spark scheduling config file " + sparkSchedulingConfFile);
+      additionalSparkConfigs.put(SparkConfigs.SPARK_SCHEDULER_ALLOCATION_FILE_KEY(), sparkSchedulingConfFile);
+    } else {
+      LOG.warn("Job Scheduling Configs will not be in effect as spark.scheduler.mode "
+          + "is not set to FAIR at instantiation time. Continuing without scheduling configs");
+    }
+    return additionalSparkConfigs;
+  }
+
+  public static Map<String, String> getSparkSchedulingConfigs(CompactTableService.Config cfg) throws Exception {
     scala.Option<String> scheduleModeKeyOption = new SparkConf().getOption(SPARK_SCHEDULER_MODE_KEY);
     final Option<String> sparkSchedulerMode =
         scheduleModeKeyOption.isDefined() ? Option.of(scheduleModeKeyOption.get()) : Option.empty();

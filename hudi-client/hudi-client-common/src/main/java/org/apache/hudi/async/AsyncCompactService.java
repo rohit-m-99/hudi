@@ -61,6 +61,11 @@ public abstract class AsyncCompactService extends HoodieAsyncTableService {
     this.maxConcurrentCompaction = 1;
   }
 
+  @Override
+  protected String getIdentifier() {
+    return this.writeConfig.getTableName();
+  }
+
   protected abstract BaseCompactor createCompactor(BaseHoodieWriteClient client);
 
   /**
