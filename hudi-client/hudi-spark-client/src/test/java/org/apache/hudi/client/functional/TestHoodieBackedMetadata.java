@@ -1347,7 +1347,7 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
    */
   @ParameterizedTest
   @EnumSource(HoodieTableType.class)
-  public void testFirstCommitRollback(HoodieTableType tableType) throws Exception {
+  public void testFirstCommitRollback(HoodieTableType tableType) throws IOException {
     init(tableType);
     HoodieSparkEngineContext engineContext = new HoodieSparkEngineContext(jsc);
 
