@@ -75,7 +75,7 @@ public class SparkHoodieMetadataBulkInsertPartitioner implements BulkInsertParti
 
     // Partition the records by their location
     JavaRDD<HoodieRecord> partitionedRDD = records
-        .keyBy(r -> new Tuple2<Integer, String>(HoodieTableMetadataUtil.mapRecordKeyToFileGroupIndex(r.getRecordKey(), fileGroupCount), r.getRecordKey()))
+        .keyBy(r -> new Tuple2<Integer, String>(HoodieMetadataFileSliceUtil.mapRecordKeyToFileGroupIndex(r.getRecordKey(), fileGroupCount), r.getRecordKey()))
         .repartitionAndSortWithinPartitions(new FileGroupPartitioner(fileGroupCount), keyComparator)
         .map(t -> t._2);
     ValidationUtils.checkArgument(partitionedRDD.getNumPartitions() <= fileGroupCount,

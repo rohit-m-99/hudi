@@ -45,6 +45,8 @@ public interface HoodieFileReader<R extends IndexedRecord> extends AutoCloseable
 
   ClosableIterator<R> getRecordIterator(Schema readerSchema) throws IOException;
 
+  ClosableIterator<String> getRecordKeyIterator() throws IOException;
+
   default ClosableIterator<R> getRecordIterator() throws IOException {
     return getRecordIterator(getSchema());
   }

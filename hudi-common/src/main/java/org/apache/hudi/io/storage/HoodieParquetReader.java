@@ -23,6 +23,7 @@ import org.apache.hudi.common.model.HoodieFileFormat;
 import org.apache.hudi.common.util.BaseFileUtils;
 import org.apache.hudi.common.util.ClosableIterator;
 import org.apache.hudi.common.util.ParquetReaderIterator;
+import org.apache.hudi.common.util.collection.CloseableMappingIterator;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
@@ -86,6 +87,11 @@ public class HoodieParquetReader<R extends IndexedRecord> implements HoodieFileR
     ParquetReaderIterator<R> parquetReaderIterator = new ParquetReaderIterator<>(reader);
     readerIterators.add(parquetReaderIterator);
     return parquetReaderIterator;
+  }
+
+  @Override
+  public ClosableIterator<String> getRecordKeyIterator() throws IOException {
+    return new CloseableMappingIterator<>(parquetUtils.getHoodieKeyIterator(conf, path), hoodieKey -> hoodieKey.getRecordKey());
   }
 
   @Override

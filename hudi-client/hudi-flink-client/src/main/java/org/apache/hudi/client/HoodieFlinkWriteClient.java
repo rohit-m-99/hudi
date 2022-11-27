@@ -122,7 +122,7 @@ public class HoodieFlinkWriteClient<T extends HoodieRecordPayload> extends
         .values().stream()
         .map(duplicates -> duplicates.stream().reduce(WriteStatMerger::merge).get())
         .collect(Collectors.toList());
-    return commitStats(instantTime, merged, extraMetadata, commitActionType, partitionToReplacedFileIds);
+    return commitStats(instantTime, context.parallelize(writeStatuses), merged, extraMetadata, commitActionType, partitionToReplacedFileIds);
   }
 
   @Override

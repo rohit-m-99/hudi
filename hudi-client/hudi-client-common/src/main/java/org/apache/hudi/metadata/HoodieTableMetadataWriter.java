@@ -22,9 +22,12 @@ import org.apache.hudi.avro.model.HoodieCleanMetadata;
 import org.apache.hudi.avro.model.HoodieIndexPartitionInfo;
 import org.apache.hudi.avro.model.HoodieRestoreMetadata;
 import org.apache.hudi.avro.model.HoodieRollbackMetadata;
+import org.apache.hudi.client.WriteStatus;
+import org.apache.hudi.common.data.HoodieData;
 import org.apache.hudi.common.engine.HoodieEngineContext;
 import org.apache.hudi.common.model.HoodieCommitMetadata;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
+import org.apache.hudi.config.HoodieWriteConfig;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -41,17 +44,18 @@ public interface HoodieTableMetadataWriter extends Serializable, AutoCloseable {
    * @param engineContext
    * @param indexPartitionInfos - information about partitions to build such as partition type and base instant time
    */
-  void buildMetadataPartitions(HoodieEngineContext engineContext, List<HoodieIndexPartitionInfo> indexPartitionInfos);
+  void buildMetadataPartitions(HoodieEngineContext engineContext, List<HoodieIndexPartitionInfo> indexPartitionInfos) throws IOException;
 
   /**
    * Initialize file groups for the given metadata partitions when indexing is requested.
    *
-   * @param dataMetaClient     - meta client for the data table
-   * @param metadataPartitions - metadata partitions for which file groups needs to be initialized
-   * @param instantTime        - instant time of the index action
+   * @param dataMetaClient      - meta client for the data table
+   * @param metadataWriteConfig - metadata table's write config.
+   * @param metadataPartitions  - metadata partitions for which file groups needs to be initialized
+   * @param instantTime         - instant time of the index action
    * @throws IOException
    */
-  void initializeMetadataPartitions(HoodieTableMetaClient dataMetaClient, List<MetadataPartitionType> metadataPartitions, String instantTime) throws IOException;
+  void initializeMetadataPartitions(HoodieTableMetaClient dataMetaClient, HoodieWriteConfig metadataWriteConfig, List<MetadataPartitionType> metadataPartitions, String instantTime) throws IOException;
 
   /**
    * Drop the given metadata partitions.
@@ -65,11 +69,12 @@ public interface HoodieTableMetadataWriter extends Serializable, AutoCloseable {
    * Update the metadata table due to a COMMIT operation.
    *
    * @param commitMetadata       commit metadata of the operation of interest.
+   * @param writeStatuses        write statuses of the operation of interest.
    * @param instantTime          instant time of the commit.
    * @param isTableServiceAction true if caller is a table service. false otherwise. Only regular write operations can trigger metadata table services and this argument
    *                             will assist in this.
    */
-  void update(HoodieCommitMetadata commitMetadata, String instantTime, boolean isTableServiceAction);
+  void update(HoodieCommitMetadata commitMetadata, HoodieData<WriteStatus> writeStatuses, String instantTime, boolean isTableServiceAction);
 
   /**
    * Update the metadata table due to a CLEAN operation.

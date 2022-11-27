@@ -302,7 +302,7 @@ public abstract class BaseSparkCommitActionExecutor<T extends HoodieRecordPayloa
     try {
       HoodieActiveTimeline activeTimeline = table.getActiveTimeline();
       HoodieCommitMetadata metadata = result.getCommitMetadata().get();
-      writeTableMetadata(metadata, actionType);
+      writeTableMetadata(metadata, actionType, result.getWriteStatuses());
       activeTimeline.saveAsComplete(new HoodieInstant(true, getCommitActionType(), instantTime),
           Option.of(metadata.toJsonString().getBytes(StandardCharsets.UTF_8)));
       LOG.info("Committed " + instantTime);

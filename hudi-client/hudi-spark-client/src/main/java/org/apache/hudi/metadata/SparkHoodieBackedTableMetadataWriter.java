@@ -211,7 +211,7 @@ public class SparkHoodieBackedTableMetadataWriter extends HoodieBackedTableMetad
     commitInternal(instantTime, Collections.singletonMap(metadataPartitionType, records),false, Option.of(partitioner));
 
     // Ensure the expected number of file groups were created
-    List<FileSlice> fileSlices = HoodieTableMetadataUtil.getPartitionLatestFileSlices(metadataMetaClient,
+    List<FileSlice> fileSlices = HoodieMetadataFileSliceUtil.getPartitionLatestFileSlices(metadataMetaClient,
         metadataPartitionType.getPartitionPath());
     ValidationUtils.checkState(fileSlices.size() == fileGroupCount,
         String.format("Wrong number of fileSlices created for partition %s: expected=%d, found=%d", metadataPartitionType.getPartitionPath(),

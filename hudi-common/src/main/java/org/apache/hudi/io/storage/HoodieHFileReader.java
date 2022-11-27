@@ -24,6 +24,7 @@ import org.apache.hudi.common.bloom.BloomFilterFactory;
 import org.apache.hudi.common.fs.FSUtils;
 import org.apache.hudi.common.util.ClosableIterator;
 import org.apache.hudi.common.util.Option;
+import org.apache.hudi.common.util.collection.CloseableMappingIterator;
 import org.apache.hudi.common.util.io.ByteBufferBackedInputStream;
 import org.apache.hudi.exception.HoodieException;
 import org.apache.hudi.exception.HoodieIOException;
@@ -184,6 +185,12 @@ public class HoodieHFileReader<R extends IndexedRecord> implements HoodieFileRea
     // TODO eval whether seeking scanner would be faster than pread
     HFileScanner scanner = getHFileScanner(reader, false);
     return (ClosableIterator<R>) new RecordIterator(scanner, getSchema(), readerSchema);
+  }
+
+  @Override
+  public ClosableIterator<String> getRecordKeyIterator() throws IOException {
+    final HFileScanner scanner = reader.getScanner(false, false);
+    return new CloseableMappingIterator<>(new RecordIterator(scanner, getSchema(), getSchema()), genericRecord -> (String) genericRecord.get(KEY_FIELD_NAME));
   }
 
   @SuppressWarnings("unchecked")

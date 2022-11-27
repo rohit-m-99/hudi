@@ -25,9 +25,10 @@ import java.util.List;
  * Partition types for metadata table.
  */
 public enum MetadataPartitionType {
-  FILES(HoodieTableMetadataUtil.PARTITION_NAME_FILES, "files-"),
-  COLUMN_STATS(HoodieTableMetadataUtil.PARTITION_NAME_COLUMN_STATS, "col-stats-"),
-  BLOOM_FILTERS(HoodieTableMetadataUtil.PARTITION_NAME_BLOOM_FILTERS, "bloom-filters-");
+  FILES(HoodieMetadataPartitionNames.PARTITION_NAME_FILES, "files-"),
+  COLUMN_STATS(HoodieMetadataPartitionNames.PARTITION_NAME_COLUMN_STATS, "col-stats-"),
+  BLOOM_FILTERS(HoodieMetadataPartitionNames.PARTITION_NAME_BLOOM_FILTERS, "bloom-filters-"),
+  RECORD_INDEX(HoodieMetadataPartitionNames.PARTITION_NAME_RECORD_INDEX, "record-index-");
 
   // Partition path in metadata table.
   private final String partitionPath;
@@ -63,7 +64,8 @@ public enum MetadataPartitionType {
     return Arrays.asList(
         FILES.getPartitionPath(),
         COLUMN_STATS.getPartitionPath(),
-        BLOOM_FILTERS.getPartitionPath()
+        BLOOM_FILTERS.getPartitionPath(),
+        RECORD_INDEX.getPartitionPath()
     );
   }
 

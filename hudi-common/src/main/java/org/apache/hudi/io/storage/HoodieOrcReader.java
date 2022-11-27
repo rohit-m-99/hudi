@@ -24,6 +24,7 @@ import org.apache.hudi.common.util.AvroOrcUtils;
 import org.apache.hudi.common.util.BaseFileUtils;
 import org.apache.hudi.common.util.ClosableIterator;
 import org.apache.hudi.common.util.OrcReaderIterator;
+import org.apache.hudi.common.util.collection.CloseableMappingIterator;
 import org.apache.hudi.exception.HoodieIOException;
 
 import org.apache.avro.Schema;
@@ -80,6 +81,11 @@ public class HoodieOrcReader<R extends IndexedRecord> implements HoodieFileReade
     } catch (IOException io) {
       throw new HoodieIOException("Unable to create an ORC reader.", io);
     }
+  }
+
+  @Override
+  public ClosableIterator<String> getRecordKeyIterator() throws IOException {
+    return new CloseableMappingIterator<>(orcUtils.getHoodieKeyIterator(conf, path), hoodieKey -> hoodieKey.getRecordKey());
   }
 
   @Override
