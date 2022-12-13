@@ -43,6 +43,7 @@ import org.apache.hudi.common.util.Option;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieClusteringException;
 import org.apache.hudi.exception.HoodieCommitException;
+import org.apache.hudi.exception.HoodieException;
 import org.apache.hudi.exception.HoodieNotSupportedException;
 import org.apache.hudi.index.FlinkHoodieIndexFactory;
 import org.apache.hudi.index.HoodieIndex;
@@ -290,6 +291,11 @@ public class HoodieFlinkWriteClient<T extends HoodieRecordPayload> extends
     // jobs.
     this.metadataWriter.initTableMetadata();
     this.metadataWriter.update(metadata, instantTime, getHoodieTable().isTableServiceAction(actionType, instantTime));
+    try {
+      this.metadataWriter.close();
+    } catch (Exception e) {
+      throw new HoodieException("Failed to close metadata writer ", e);
+    }
   }
 
   /**
