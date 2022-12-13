@@ -639,8 +639,7 @@ object HoodieSparkSqlWriter {
       if (userDefinedBulkInsertPartitionerOpt.isPresent) {
         userDefinedBulkInsertPartitionerOpt.get
       } else {
-        BulkInsertInternalPartitionerWithRowsFactory.get(
-          writeConfig.getBulkInsertSortMode, isTablePartitioned)
+        BulkInsertInternalPartitionerWithRowsFactory.get(writeConfig, isTablePartitioned)
       }
     } else {
       // Sort modes are not yet supported when meta fields are disabled
@@ -886,7 +885,7 @@ object HoodieSparkSqlWriter {
   }
 
   private def mergeParamsAndGetHoodieConfig(optParams: Map[String, String],
-      tableConfig: HoodieTableConfig, mode: SaveMode): (Map[String, String], HoodieConfig) = {
+                                            tableConfig: HoodieTableConfig, mode: SaveMode): (Map[String, String], HoodieConfig) = {
     val translatedOptions = DataSourceWriteOptions.translateSqlOptions(optParams)
     val mergedParams = mutable.Map.empty ++ HoodieWriterUtils.parametersWithWriteDefaults(translatedOptions)
     if (!mergedParams.contains(HoodieTableConfig.KEY_GENERATOR_CLASS_NAME.key)
