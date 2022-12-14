@@ -20,9 +20,7 @@ package org.apache.hudi.table.format.cow;
 
 import java.util.Comparator;
 import org.apache.hudi.common.fs.FSUtils;
-import org.apache.hudi.common.util.ClosableIterator;
-import org.apache.hudi.table.format.InternalSchemaManager;
-import org.apache.hudi.table.format.RecordIterators;
+import org.apache.hudi.table.format.cow.vector.reader.ParquetColumnarRowSplitReader;
 import org.apache.hudi.util.DataTypeUtils;
 
 import org.apache.flink.api.common.io.FileInputFormat;
@@ -76,15 +74,13 @@ public class CopyOnWriteInputFormat extends FileInputFormat<RowData> {
   private final SerializableConfiguration conf;
   private final long limit;
 
-  private transient ClosableIterator<RowData> itr;
+  private transient ParquetColumnarRowSplitReader reader;
   private transient long currentReadCount;
 
   /**
    * Files filter for determining what files/directories should be included.
    */
   private FilePathFilter localFilesFilter = new GlobFilePathFilter();
-
-  private final InternalSchemaManager internalSchemaManager;
 
   public CopyOnWriteInputFormat(
       Path[] paths,
@@ -94,8 +90,7 @@ public class CopyOnWriteInputFormat extends FileInputFormat<RowData> {
       String partDefaultName,
       long limit,
       Configuration conf,
-      boolean utcTimestamp,
-      InternalSchemaManager internalSchemaManager) {
+      boolean utcTimestamp) {
     super.setFilePaths(paths);
     this.limit = limit;
     this.partDefaultName = partDefaultName;
@@ -104,7 +99,6 @@ public class CopyOnWriteInputFormat extends FileInputFormat<RowData> {
     this.selectedFields = selectedFields;
     this.conf = new SerializableConfiguration(conf);
     this.utcTimestamp = utcTimestamp;
-    this.internalSchemaManager = internalSchemaManager;
   }
 
   @Override
@@ -129,8 +123,7 @@ public class CopyOnWriteInputFormat extends FileInputFormat<RowData> {
       }
     });
 
-    this.itr = RecordIterators.getParquetRecordIterator(
-        internalSchemaManager,
+    this.reader = ParquetSplitReaderUtil.genPartColumnarRowReader(
         utcTimestamp,
         true,
         conf.conf(),
@@ -277,26 +270,26 @@ public class CopyOnWriteInputFormat extends FileInputFormat<RowData> {
   }
 
   @Override
-  public boolean reachedEnd() {
+  public boolean reachedEnd() throws IOException {
     if (currentReadCount >= limit) {
       return true;
     } else {
-      return !itr.hasNext();
+      return reader.reachedEnd();
     }
   }
 
   @Override
   public RowData nextRecord(RowData reuse) {
     currentReadCount++;
-    return itr.next();
+    return reader.nextRecord();
   }
 
   @Override
   public void close() throws IOException {
-    if (itr != null) {
-      this.itr.close();
+    if (reader != null) {
+      this.reader.close();
     }
-    this.itr = null;
+    this.reader = null;
   }
 
   /**
