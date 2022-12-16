@@ -27,6 +27,7 @@ public class HoodieTableHeaderFields {
   public static final String HEADER_INSTANT = "Instant";
   public static final String HEADER_PARTITION_PATH = HEADER_PARTITION + " Path";
   public static final String HEADER_FILE_ID = "FileId";
+  public static final String HEADER_FILE_NAME = "FileName";
   public static final String HEADER_BASE_INSTANT = "Base-Instant";
   public static final String HEADER_INSTANT_TIME = "InstantTime";
   public static final String HEADER_CLEAN_TIME = "CleanTime";
@@ -200,6 +201,27 @@ public class HoodieTableHeaderFields {
         .addTableHeaderField(HoodieTableHeaderFields.HEADER_INSTANT)
         .addTableHeaderField(HoodieTableHeaderFields.HEADER_PARTITION)
         .addTableHeaderField(HoodieTableHeaderFields.HEADER_FILE_ID)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_PREVIOUS_COMMIT)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_NUM_WRITES)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_NUM_INSERTS)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_NUM_DELETES)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_NUM_UPDATE_WRITES)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_TOTAL_ERRORS)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_TOTAL_LOG_BLOCKS)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_TOTAL_CORRUPT_LOG_BLOCKS)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_TOTAL_ROLLBACK_BLOCKS)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_TOTAL_LOG_RECORDS)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_TOTAL_UPDATED_RECORDS_COMPACTED)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_TOTAL_BYTES_WRITTEN);
+  }
+
+  public static TableHeader getTableHeaderWithExtraMetadataWithFileName() {
+    return new TableHeader()
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_ACTION)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_INSTANT)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_PARTITION)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_FILE_ID)
+        .addTableHeaderField(HoodieTableHeaderFields.HEADER_FILE_NAME)
         .addTableHeaderField(HoodieTableHeaderFields.HEADER_PREVIOUS_COMMIT)
         .addTableHeaderField(HoodieTableHeaderFields.HEADER_NUM_WRITES)
         .addTableHeaderField(HoodieTableHeaderFields.HEADER_NUM_INSERTS)
