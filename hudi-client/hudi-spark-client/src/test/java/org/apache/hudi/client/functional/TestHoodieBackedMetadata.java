@@ -631,7 +631,7 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
     // this should have triggered compaction in metadata table
     tableMetadata = metadata(writeConfig, context);
     assertTrue(tableMetadata.getLatestCompactionTime().isPresent());
-    assertEquals(tableMetadata.getLatestCompactionTime().get(), "0000003001");
+    assertEquals(tableMetadata.getLatestCompactionTime().get(), "0000003002");
   }
 
   @ParameterizedTest
@@ -754,7 +754,7 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
 
     HoodieTableMetadata tableMetadata = metadata(writeConfig, context);
     assertTrue(tableMetadata.getLatestCompactionTime().isPresent());
-    assertEquals(tableMetadata.getLatestCompactionTime().get(), "0000003001");
+    assertEquals(tableMetadata.getLatestCompactionTime().get(), "0000003002");
 
     HoodieTableMetaClient metadataMetaClient = HoodieTableMetaClient.builder().setConf(hadoopConf).setBasePath(metadataTableBasePath).build();
     HoodieWriteConfig metadataTableWriteConfig = getMetadataWriteConfig(writeConfig);
@@ -802,7 +802,7 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
     doWriteOperation(testTable, "0000003", INSERT);
 
     HoodieTableMetadata tableMetadata = metadata(writeConfig, context);
-    String metadataCompactionInstant = commitInstant + "001";
+    String metadataCompactionInstant = commitInstant + "002";
     assertTrue(tableMetadata.getLatestCompactionTime().isPresent());
     assertEquals(tableMetadata.getLatestCompactionTime().get(), metadataCompactionInstant);
 
@@ -835,7 +835,7 @@ public class TestHoodieBackedMetadata extends TestHoodieMetadataBase {
 
     if (simulateFailedCompaction) {
       //trigger another compaction failure.
-      metadataCompactionInstant = "0000005001";
+      metadataCompactionInstant = "0000005002";
       tableMetadata = metadata(writeConfig, context);
       assertTrue(tableMetadata.getLatestCompactionTime().isPresent());
       assertEquals(tableMetadata.getLatestCompactionTime().get(), metadataCompactionInstant);

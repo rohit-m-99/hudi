@@ -269,6 +269,7 @@ public class HoodieCompactor {
           throw new HoodieCompactionException("There is no scheduled compaction in the table.");
         }
       }
+      // if we dedect any other concurrent writes, and if concurrent write is not enabled, and lock provider is not set, we should fail.
       HoodieWriteMetadata<JavaRDD<WriteStatus>> compactionMetadata = client.compact(cfg.compactionInstantTime);
       return UtilHelpers.handleErrors(compactionMetadata.getCommitMetadata().get(), cfg.compactionInstantTime);
     }

@@ -47,6 +47,7 @@ import org.apache.spark.api.java.JavaRDD;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -207,7 +208,9 @@ public class SparkHoodieBackedTableMetadataWriter extends HoodieBackedTableMetad
   @Override
   protected void commit(String instantTime, MetadataPartitionType metadataPartitionType, HoodieData<HoodieRecord> records, int fileGroupCount) {
     LOG.info("Performing bulk insert for partition " + metadataPartitionType.getPartitionPath() + " with " + fileGroupCount + " file groups");
-    SparkHoodieMetadataBulkInsertPartitioner partitioner = new SparkHoodieMetadataBulkInsertPartitioner(fileGroupCount);
+    Map<MetadataPartitionType, Integer> fileGroupToPartitionerIndex = new HashMap<>();
+    fileGroupToPartitionerIndex.put(metadataPartitionType, fileGroupCount);
+    SparkHoodieMetadataBulkInsertPartitioner partitioner = new SparkHoodieMetadataBulkInsertPartitioner(fileGroupCount, metadataPartitionType);
     commitInternal(instantTime, Collections.singletonMap(metadataPartitionType, records),false, Option.of(partitioner));
 
     // Ensure the expected number of file groups were created

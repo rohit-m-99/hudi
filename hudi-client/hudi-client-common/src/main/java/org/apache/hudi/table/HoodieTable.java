@@ -120,7 +120,7 @@ public abstract class HoodieTable<T extends HoodieRecordPayload, I, K, O> implem
   protected final HoodieIndex<?, ?> index;
   private SerializableConfiguration hadoopConfiguration;
   protected final TaskContextSupplier taskContextSupplier;
-  private final HoodieTableMetadata metadata;
+  private final HoodieTableMetadata metadataReader;
   private final HoodieStorageLayout storageLayout;
 
   private transient FileSystemViewManager viewManager;
@@ -133,10 +133,10 @@ public abstract class HoodieTable<T extends HoodieRecordPayload, I, K, O> implem
 
     HoodieMetadataConfig metadataConfig = HoodieMetadataConfig.newBuilder().fromProperties(config.getMetadataConfig().getProps())
         .build();
-    this.metadata = HoodieTableMetadata.create(context, metadataConfig, config.getBasePath(),
+    this.metadataReader = HoodieTableMetadata.create(context, metadataConfig, config.getBasePath(),
         FileSystemViewStorageConfig.SPILLABLE_DIR.defaultValue());
 
-    this.viewManager = FileSystemViewManager.createViewManager(context, config.getMetadataConfig(), config.getViewStorageConfig(), config.getCommonConfig(), () -> metadata);
+    this.viewManager = FileSystemViewManager.createViewManager(context, config.getMetadataConfig(), config.getViewStorageConfig(), config.getCommonConfig(), () -> metadataReader);
     this.metaClient = metaClient;
     this.index = getIndex(config, context);
     this.storageLayout = getStorageLayout(config);
@@ -151,13 +151,13 @@ public abstract class HoodieTable<T extends HoodieRecordPayload, I, K, O> implem
 
   private synchronized FileSystemViewManager getViewManager() {
     if (null == viewManager) {
-      viewManager = FileSystemViewManager.createViewManager(getContext(), config.getMetadataConfig(), config.getViewStorageConfig(), config.getCommonConfig(), () -> metadata);
+      viewManager = FileSystemViewManager.createViewManager(getContext(), config.getMetadataConfig(), config.getViewStorageConfig(), config.getCommonConfig(), () -> metadataReader);
     }
     return viewManager;
   }
 
-  public HoodieTableMetadata getMetadata() {
-    return metadata;
+  public HoodieTableMetadata getMetadataReader() {
+    return metadataReader;
   }
 
   /**
@@ -955,7 +955,7 @@ public abstract class HoodieTable<T extends HoodieRecordPayload, I, K, O> implem
   }
 
   public HoodieTableMetadata getMetadataTable() {
-    return this.metadata;
+    return this.metadataReader;
   }
 
   public Runnable getPreExecuteRunnable() {

@@ -447,6 +447,9 @@ public abstract class HoodieBackedTableMetadataWriter implements HoodieTableMeta
     // initialize only FILES partition for the first time.
     enabledPartitionTypes.add(MetadataPartitionType.FILES);
     initializeEnabledFileGroups(metadataMetaClient, metadataWriteConfig, createInstantTime, MetadataPartitionType.FILES);
+    // initialize all partitions enabled via metadata config
+    // TODO:
+
     initialCommit(createInstantTime, MetadataPartitionType.FILES);
     HoodieTableMetadataUtil.setMetadataPartitionState(dataMetaClient, MetadataPartitionType.FILES, true);
     return true;

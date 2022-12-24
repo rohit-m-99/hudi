@@ -434,7 +434,7 @@ public class HoodieTableMetadataUtil {
    */
   public static HoodieTableMetaClient clearMetadataTablePartitionsConfig(HoodieTableMetaClient metaClient, Option<MetadataPartitionType> partitionType, boolean clearAll) {
     Set<String> partitions = metaClient.getTableConfig().getMetadataPartitions();
-    if (clearAll && partitions.size() > 0) {
+    if (clearAll) {
       LOG.info("Clear hoodie.table.metadata.partitions in hoodie.properties");
       metaClient.getTableConfig().setValue(TABLE_METADATA_PARTITIONS.key(), EMPTY_STRING);
       HoodieTableConfig.update(metaClient.getFs(), new Path(metaClient.getMetaPath()), metaClient.getTableConfig().getProps());
