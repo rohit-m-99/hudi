@@ -259,7 +259,7 @@ public final class HoodieMetadataConfig extends HoodieConfig {
 
   public static final ConfigProperty<Boolean> RECORD_INDEX_ENABLE = ConfigProperty
       .key(METADATA_PREFIX + ".record.index.enable")
-      .defaultValue(false)
+      .defaultValue(true)
       .sinceVersion("0.13.0")
       .withDocumentation("Create the HUDI Record Index within the Metadata Table");
 

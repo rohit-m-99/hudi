@@ -660,7 +660,7 @@ public class HoodieIndexConfig extends HoodieConfig {
     private String getDefaultIndexType(EngineType engineType) {
       switch (engineType) {
         case SPARK:
-          return HoodieIndex.IndexType.SIMPLE.name();
+          return RECORD_INDEX.name();
         case FLINK:
         case JAVA:
           return HoodieIndex.IndexType.INMEMORY.name();
