@@ -262,6 +262,7 @@ public class HoodieMetrics {
       LOG.info(String.format("Sending index metrics (%s.duration, %d)", action, durationInMs));
       Metrics.registerGauge(getMetricsName("index", String.format("%s.duration", action)), durationInMs);
     }
+    LOG.warn(String.format("Sending index metrics (%s.duration, %d)", action, durationInMs));
   }
 
   String getMetricsName(String action, String metric) {
