@@ -305,7 +305,7 @@ public class SparkRDDWriteClient<T> extends
     final HoodieInstant compactionInstant = HoodieTimeline.getCompactionInflightInstant(compactionCommitTime);
     try {
       if (!basePath.contains(".hoodie/metadata")) {
-        killJVMIfDesired("/tmp/fail82_dt_compaction.txt", "Fail data table compaction before applying to MDT " + compactionCommitTime, 6);
+        killJVMIfDesired("/tmp/fail82_dt_compaction.txt", "Fail data table compaction before applying to MDT " + compactionCommitTime, 4);
       }
       this.txnManager.beginTransaction(Option.of(compactionInstant), Option.empty());
       finalizeWrite(table, compactionCommitTime, writeStats);
@@ -313,10 +313,10 @@ public class SparkRDDWriteClient<T> extends
       updateTableMetadata(table, metadata, compactionInstant);
 
       if (basePath.contains(".hoodie/metadata")) {
-        killJVMIfDesired("/tmp/fail82_mt_compaction.txt", "Fail metadata table compaction " + compactionCommitTime, 6);
+        killJVMIfDesired("/tmp/fail82_mt_compaction.txt", "Fail metadata table compaction " + compactionCommitTime, 3);
       } else {
         killJVMIfDesired("/tmp/fail82_dt_compaction.txt", "Fail data table compaction after applying to MDT, but before completing in DT "
-            + compactionCommitTime, 6);
+            + compactionCommitTime, 4);
       }
 
       LOG.info("Committing Compaction " + compactionCommitTime + ". Finished with result " + metadata);
@@ -449,7 +449,7 @@ public class SparkRDDWriteClient<T> extends
     final HoodieInstant clusteringInstant = HoodieTimeline.getReplaceCommitInflightInstant(clusteringCommitTime);
     try {
       if (!basePath.contains(".hoodie/metadata")) {
-        killJVMIfDesired("/tmp/fail81_dt_clustering.txt", "Fail data table clustering before applying to MDT " + clusteringCommitTime, 6);
+        killJVMIfDesired("/tmp/fail81_dt_clustering.txt", "Fail data table clustering before applying to MDT " + clusteringCommitTime, 4);
       }
       this.txnManager.beginTransaction(Option.of(clusteringInstant), Option.empty());
 
@@ -458,10 +458,10 @@ public class SparkRDDWriteClient<T> extends
       updateTableMetadata(table, metadata, clusteringInstant);
 
       if (basePath.contains(".hoodie/metadata")) {
-        killJVMIfDesired("/tmp/fail81_mt_clustering.txt", "Fail metadata table clustering " + clusteringCommitTime, 6);
+        killJVMIfDesired("/tmp/fail81_mt_clustering.txt", "Fail metadata table clustering " + clusteringCommitTime, 4);
       } else {
         killJVMIfDesired("/tmp/fail81_dt_clustering.txt", "Fail data table clustering after applying to MDT, but before completing in DT "
-            + clusteringCommitTime, 6);
+            + clusteringCommitTime, 4);
       }
 
       LOG.info("Committing Clustering " + clusteringCommitTime + ". Finished with result " + metadata);
