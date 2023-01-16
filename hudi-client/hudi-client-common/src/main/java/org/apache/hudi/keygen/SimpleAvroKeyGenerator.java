@@ -28,6 +28,8 @@ import java.util.Collections;
  */
 public class SimpleAvroKeyGenerator extends BaseKeyGenerator {
 
+  private final SimpleAvroRecordKeyGenerator recordKeyGenerator;
+
   public SimpleAvroKeyGenerator(TypedProperties props) {
     this(props, props.getString(KeyGeneratorOptions.RECORDKEY_FIELD_NAME.key()),
         props.getString(KeyGeneratorOptions.PARTITIONPATH_FIELD_NAME.key()));
@@ -43,11 +45,12 @@ public class SimpleAvroKeyGenerator extends BaseKeyGenerator {
         ? Collections.emptyList()
         : Collections.singletonList(recordKeyField);
     this.partitionPathFields = Collections.singletonList(partitionPathField);
+    this.recordKeyGenerator = new SimpleAvroRecordKeyGenerator(props, getRecordKeyFieldNames().get(0));
   }
 
   @Override
   public String getRecordKey(GenericRecord record) {
-    return KeyGenUtils.getRecordKey(record, getRecordKeyFieldNames().get(0), isConsistentLogicalTimestampEnabled());
+    return recordKeyGenerator.getRecordKey(record);
   }
 
   @Override

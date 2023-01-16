@@ -126,7 +126,7 @@ public abstract class BuiltinKeyGenerator extends BaseKeyGenerator implements Sp
     if (this.rowAccessor == null) {
       synchronized (this) {
         if (this.rowAccessor == null) {
-          this.rowAccessor = new SparkRowAccessor(schema);
+          this.rowAccessor = new SparkRowAccessor(schema, getRecordKeyFieldNames(), getPartitionPathFields());
         }
       }
     }
@@ -388,7 +388,7 @@ public abstract class BuiltinKeyGenerator extends BaseKeyGenerator implements Sp
    * @param dataType target data-type of the given value
    * @param value target value to be converted
    */
-  private static Object convertToLogicalDataType(DataType dataType, Object value) {
+  /*private static Object convertToLogicalDataType(DataType dataType, Object value) {
     if (value == null) {
       return null;
     } else if (dataType instanceof TimestampType) {
@@ -490,6 +490,6 @@ public abstract class BuiltinKeyGenerator extends BaseKeyGenerator implements Sp
         throw new HoodieException("Failed to resolve nested field-paths", e);
       }
     }
-  }
+  }*/
 }
 

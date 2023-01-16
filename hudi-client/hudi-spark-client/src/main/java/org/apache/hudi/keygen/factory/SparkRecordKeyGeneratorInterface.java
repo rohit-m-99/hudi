@@ -7,44 +7,40 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
-package org.apache.hudi.keygen;
+package org.apache.hudi.keygen.factory;
 
 import org.apache.hudi.ApiMaturityLevel;
 import org.apache.hudi.PublicAPIMethod;
-import org.apache.hudi.keygen.factory.SparkRecordKeyGeneratorInterface;
+import org.apache.hudi.keygen.RecordKeyGenerator;
 
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.unsafe.types.UTF8String;
 
-/**
- * Spark-specific {@link KeyGenerator} interface extension allowing implementation to
- * specifically implement record-key, partition-path generation w/o the need for (expensive)
- * conversion from Spark internal representation (for ex, to Avro)
- */
-public interface SparkKeyGeneratorInterface extends KeyGeneratorInterface, SparkRecordKeyGeneratorInterface {
+public interface SparkRecordKeyGeneratorInterface {
 
   /**
-   * Extracts partition-path from {@link Row}
+   * Extracts record key from Spark's {@link Row}
    *
-   * @param row instance of {@link Row} from which partition-path is extracted
-   * @return record's partition-path
+   * @param row instance of {@link Row} from which record-key is extracted
+   * @return record's (primary) key
    */
   @PublicAPIMethod(maturity = ApiMaturityLevel.EVOLVING)
-  String getPartitionPath(Row row);
+  String getRecordKey(Row row);
 
   /**
-   * Extracts partition-path from Spark's {@link InternalRow}
+   * Extracts record key from Spark's {@link InternalRow}
    *
    * NOTE: Difference b/w {@link Row} and {@link InternalRow} is that {@link InternalRow} could
    *       internally hold just a binary representation of the data, while {@link Row} has it
@@ -53,8 +49,9 @@ public interface SparkKeyGeneratorInterface extends KeyGeneratorInterface, Spark
    *
    * @param row instance of {@link InternalRow} from which record-key is extracted
    * @param schema schema {@link InternalRow} is adhering to
-   * @return partition-path as instance of {@link UTF8String}
+   * @return record-key as instance of {@link UTF8String}
    */
   @PublicAPIMethod(maturity = ApiMaturityLevel.EVOLVING)
-  UTF8String getPartitionPath(InternalRow row, StructType schema);
+  UTF8String getRecordKey(InternalRow row, StructType schema);
+
 }
