@@ -346,7 +346,7 @@ public class HoodieTestSuiteJob {
     public String trinoPassword;
 
     @Parameter(names = {"--index-type"}, description = "Index type to use for writes")
-    public String indexType = "SIMPLE";
+    public String indexType = "BUCKET";
 
     @Parameter(names = {"--enable-metadata-on-read"}, description = "Enable's metadata for queries")
     public Boolean enableMetadataOnRead = HoodieMetadataConfig.ENABLE.defaultValue();

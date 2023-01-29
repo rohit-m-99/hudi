@@ -25,10 +25,8 @@ import org.apache.hudi.client.common.HoodieSparkEngineContext;
 import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.common.util.collection.Pair;
-import org.apache.hudi.config.HoodieIndexConfig;
 import org.apache.hudi.config.HoodiePayloadConfig;
 import org.apache.hudi.config.HoodieWriteConfig;
-import org.apache.hudi.index.HoodieIndex;
 import org.apache.hudi.integ.testsuite.dag.nodes.CleanNode;
 import org.apache.hudi.integ.testsuite.dag.nodes.DagNode;
 import org.apache.hudi.integ.testsuite.dag.nodes.RollbackNode;
@@ -100,7 +98,6 @@ public abstract class HoodieTestSuiteWriter implements Serializable {
                 .withPayloadClass(cfg.payloadClassName)
                 .build())
             .forTable(cfg.targetTableName)
-            .withIndexConfig(HoodieIndexConfig.newBuilder().withIndexType(HoodieIndex.IndexType.valueOf(cfg.indexType)).build())
             .withProps(props);
     builder = builder.withSchema(schema);
     return builder.build();
