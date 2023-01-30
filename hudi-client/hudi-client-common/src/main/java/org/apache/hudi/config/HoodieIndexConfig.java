@@ -265,7 +265,7 @@ public class HoodieIndexConfig extends HoodieConfig {
    */
   public static final ConfigProperty<Integer> BUCKET_INDEX_NUM_BUCKETS = ConfigProperty
       .key("hoodie.bucket.index.num.buckets")
-      .defaultValue(4)
+      .defaultValue(16)
       .withDocumentation("Only applies if index type is BUCKET. Determine the number of buckets in the hudi table, "
           + "and each partition is divided to N buckets.");
 
