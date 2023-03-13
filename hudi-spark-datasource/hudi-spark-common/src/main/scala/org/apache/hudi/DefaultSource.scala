@@ -241,7 +241,7 @@ object DefaultSource {
     }
 
     if (metaClient.getCommitsTimeline.filterCompletedInstants.countInstants() == 0) {
-      new EmptyRelation(sqlContext, resolveSchema(metaClient, parameters, Some(schema)))
+      new EmptyRelation(sqlContext, new StructType())
     } else if (isCdcQuery) {
       CDCRelation.getCDCRelation(sqlContext, metaClient, parameters)
     } else {
