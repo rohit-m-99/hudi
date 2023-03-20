@@ -20,6 +20,7 @@ package org.apache.hudi.utilities.sources;
 
 import org.apache.hudi.DataSourceReadOptions;
 import org.apache.hudi.DataSourceUtils;
+import org.apache.hudi.common.config.HoodieStorageConfig;
 import org.apache.hudi.common.config.SerializableConfiguration;
 import org.apache.hudi.common.config.TypedProperties;
 import org.apache.hudi.common.fs.FSUtils;
@@ -42,9 +43,17 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.analysis.SimpleAnalyzer$;
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.catalyst.encoders.RowEncoder;
+import org.apache.spark.sql.catalyst.expressions.Attribute;
+import org.apache.spark.sql.catalyst.expressions.GenericRow;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -53,7 +62,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
+import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 import static org.apache.hudi.utilities.sources.HoodieIncrSource.Config.DEFAULT_NUM_INSTANTS_PER_FETCH;
 import static org.apache.hudi.utilities.sources.HoodieIncrSource.Config.DEFAULT_READ_LATEST_INSTANT_ON_MISSING_CKPT;
@@ -68,6 +81,14 @@ import static org.apache.hudi.utilities.sources.HoodieIncrSource.Config.SOURCE_F
 public class S3EventsHoodieIncrSource extends HoodieIncrSource {
 
   private static final Logger LOG = LogManager.getLogger(S3EventsHoodieIncrSource.class);
+
+  private static final StructType STRUCT_TYPE = new StructType(new StructField[] {
+      new StructField("object_name", DataTypes.StringType, false, Metadata.empty()),
+      new StructField("object_size", DataTypes.LongType, false, Metadata.empty())});
+
+  private static final ExpressionEncoder ENCODER = getEncoder(STRUCT_TYPE);
+
+  private final long maxParquetFileSizeInBytes;
 
   static class Config {
     // control whether we do existence check for files before consuming them
@@ -96,6 +117,7 @@ public class S3EventsHoodieIncrSource extends HoodieIncrSource {
       SparkSession sparkSession,
       SchemaProvider schemaProvider) {
     super(props, sparkContext, sparkSession, schemaProvider);
+    this.maxParquetFileSizeInBytes = props.getLong(HoodieStorageConfig.PARQUET_MAX_FILE_SIZE.key(), Long.parseLong(HoodieStorageConfig.PARQUET_MAX_FILE_SIZE.defaultValue()));
   }
 
   private DataFrameReader getDataFrameReader(String fileFormat) {
@@ -184,26 +206,28 @@ public class S3EventsHoodieIncrSource extends HoodieIncrSource {
     // Create S3 paths
     final boolean checkExists = props.getBoolean(Config.ENABLE_EXISTS_CHECK, Config.DEFAULT_ENABLE_EXISTS_CHECK);
     SerializableConfiguration serializableConfiguration = new SerializableConfiguration(sparkContext.hadoopConfiguration());
-    List<String> cloudFiles = source
+
+    List<Row> cloudFiles = source
         .filter(filter)
-        .select("s3.bucket.name", "s3.object.key")
+        .select("s3.bucket.name", "s3.object.key", "s3.object.size")
         .distinct()
-        .mapPartitions((MapPartitionsFunction<Row, String>)  fileListIterator -> {
-          List<String> cloudFilesPerPartition = new ArrayList<>();
+        .mapPartitions((MapPartitionsFunction<Row, Row>)  fileListIterator -> {
+          List<Row> cloudFilesPerPartition = new ArrayList<>();
           final Configuration configuration = serializableConfiguration.newCopy();
           fileListIterator.forEachRemaining(row -> {
             String bucket = row.getString(0);
             String filePath = s3Prefix + bucket + "/" + row.getString(1);
+            long sizeInBytes = row.getLong(2);
             String decodeUrl = null;
             try {
               decodeUrl = URLDecoder.decode(filePath, StandardCharsets.UTF_8.name());
               if (checkExists) {
                 FileSystem fs = FSUtils.getFs(s3Prefix + bucket, configuration);
                 if (fs.exists(new Path(decodeUrl))) {
-                  cloudFilesPerPartition.add(decodeUrl);
+                  cloudFilesPerPartition.add(new GenericRow(new Object[]{decodeUrl, sizeInBytes}));
                 }
               } else {
-                cloudFilesPerPartition.add(decodeUrl);
+                cloudFilesPerPartition.add(new GenericRow(new Object[]{decodeUrl, sizeInBytes}));
               }
             } catch (IOException e) {
               LOG.error(String.format("Error while checking path exists for %s ", decodeUrl), e);
@@ -214,15 +238,41 @@ public class S3EventsHoodieIncrSource extends HoodieIncrSource {
             }
           });
           return cloudFilesPerPartition.iterator();
-        }, Encoders.STRING()).collectAsList();
+        }, ENCODER).collectAsList();
+
+    List<String> objectNames = new ArrayList<>();
+    AtomicLong totalSizeInBytes = new AtomicLong(-1);
+    cloudFiles.forEach(row -> {
+      objectNames.add(row.getString(0));
+      totalSizeInBytes.addAndGet(row.getLong(1));
+    });
+
+    int repartitionByCount = totalSizeInBytes.get() > maxParquetFileSizeInBytes ? (int) (totalSizeInBytes.get() / maxParquetFileSizeInBytes) : 1;
+
+    LOG.info("Total data to be consumed in this batch " + totalSizeInBytes + ". Max parquet file size configured " + maxParquetFileSizeInBytes
+        + ". Hence repartitioning the data read by " + repartitionByCount);
 
     Option<Dataset<Row>> dataset = Option.empty();
     if (!cloudFiles.isEmpty()) {
       DataFrameReader dataFrameReader = getDataFrameReader(fileFormat);
-      dataset = Option.of(dataFrameReader.load(cloudFiles.toArray(new String[0])));
+      dataset = Option.of(dataFrameReader.load(objectNames.toArray(new String[0])).repartition(repartitionByCount));
     }
     LOG.debug("Extracted distinct files " + cloudFiles.size()
         + " and some samples " + cloudFiles.stream().limit(10).collect(Collectors.toList()));
     return Pair.of(dataset, queryTypeAndInstantEndpts.getRight().getRight());
+  }
+
+  /**
+   * Generate Encode for the passed in {@link StructType}.
+   *
+   * @param schema instance of {@link StructType} for which encoder is requested.
+   * @return the encoder thus generated.
+   */
+  private static ExpressionEncoder getEncoder(StructType schema) {
+    List<Attribute> attributes = JavaConversions.asJavaCollection(schema.toAttributes()).stream()
+        .map(Attribute::toAttribute).collect(Collectors.toList());
+    return RowEncoder.apply(schema)
+        .resolveAndBind(JavaConverters.asScalaBufferConverter(attributes).asScala().toSeq(),
+            SimpleAnalyzer$.MODULE$);
   }
 }
