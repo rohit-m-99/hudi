@@ -86,7 +86,7 @@ public class S3EventsHoodieIncrSource extends HoodieIncrSource {
       new StructField("object_name", DataTypes.StringType, false, Metadata.empty()),
       new StructField("object_size", DataTypes.LongType, false, Metadata.empty())});
 
-  private static final ExpressionEncoder ENCODER = getEncoder(STRUCT_TYPE);
+  private static final ExpressionEncoder ENCODER = RowEncoder.apply(STRUCT_TYPE);
 
   private final long maxParquetFileSizeInBytes;
 
@@ -241,7 +241,7 @@ public class S3EventsHoodieIncrSource extends HoodieIncrSource {
         }, ENCODER).collectAsList();
 
     List<String> objectNames = new ArrayList<>();
-    AtomicLong totalSizeInBytes = new AtomicLong(-1);
+    AtomicLong totalSizeInBytes = new AtomicLong(0);
     cloudFiles.forEach(row -> {
       objectNames.add(row.getString(0));
       totalSizeInBytes.addAndGet(row.getLong(1));
@@ -260,19 +260,5 @@ public class S3EventsHoodieIncrSource extends HoodieIncrSource {
     LOG.debug("Extracted distinct files " + cloudFiles.size()
         + " and some samples " + cloudFiles.stream().limit(10).collect(Collectors.toList()));
     return Pair.of(dataset, queryTypeAndInstantEndpts.getRight().getRight());
-  }
-
-  /**
-   * Generate Encode for the passed in {@link StructType}.
-   *
-   * @param schema instance of {@link StructType} for which encoder is requested.
-   * @return the encoder thus generated.
-   */
-  private static ExpressionEncoder getEncoder(StructType schema) {
-    List<Attribute> attributes = JavaConversions.asJavaCollection(schema.toAttributes()).stream()
-        .map(Attribute::toAttribute).collect(Collectors.toList());
-    return RowEncoder.apply(schema)
-        .resolveAndBind(JavaConverters.asScalaBufferConverter(attributes).asScala().toSeq(),
-            SimpleAnalyzer$.MODULE$);
   }
 }
