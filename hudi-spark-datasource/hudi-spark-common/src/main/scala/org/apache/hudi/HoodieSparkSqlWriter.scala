@@ -650,12 +650,12 @@ object HoodieSparkSqlWriter {
     val latestTableSchemaFromCommitMetadata =
       toScalaOption(tableSchemaResolver.getTableAvroSchemaFromLatestCommit(false))
     latestTableSchemaFromCommitMetadata
-      /*.orElse {
+      .orElse {
       getCatalogTable(spark, tableId).map { catalogTable =>
         val (structName, namespace) = getAvroRecordNameAndNamespace(tableId.table)
         convertStructTypeToAvroSchema(catalogTable.schema, structName, namespace)
       }
-    }*/
+    }
   }
 
   private def getCatalogTable(spark: SparkSession, tableId: TableIdentifier): Option[CatalogTable] = {
