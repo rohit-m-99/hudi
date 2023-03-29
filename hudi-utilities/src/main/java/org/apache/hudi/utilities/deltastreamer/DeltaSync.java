@@ -332,6 +332,8 @@ public class DeltaSync implements Serializable {
 
       result = writeToSink(srcRecordsWithCkpt.getRight().getRight(),
           srcRecordsWithCkpt.getRight().getLeft(), metrics, overallTimerContext);
+
+      schemaProvider.refresh();
     }
 
     metrics.updateDeltaStreamerSyncMetrics(System.currentTimeMillis());

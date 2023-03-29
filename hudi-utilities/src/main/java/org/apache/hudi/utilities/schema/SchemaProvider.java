@@ -56,4 +56,8 @@ public abstract class SchemaProvider implements Serializable {
     // by default, use source schema as target for hoodie table as well
     return getSourceSchema();
   }
+
+  public void refresh() {
+
+  }
 }

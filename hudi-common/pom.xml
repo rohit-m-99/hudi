@@ -255,6 +255,10 @@
           <groupId>tomcat</groupId>
           <artifactId>*</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.glassfish</groupId>
+          <artifactId>javax.el</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 

@@ -49,12 +49,18 @@ public class FilebasedSchemaProvider extends SchemaProvider {
   protected Schema sourceSchema;
 
   protected Schema targetSchema;
+  private TypedProperties props;
 
   public FilebasedSchemaProvider(TypedProperties props, JavaSparkContext jssc) {
     super(props, jssc);
     DataSourceUtils.checkRequiredProperties(props, Collections.singletonList(Config.SOURCE_SCHEMA_FILE_PROP));
     String sourceFile = props.getString(Config.SOURCE_SCHEMA_FILE_PROP);
     this.fs = FSUtils.getFs(sourceFile, jssc.hadoopConfiguration(), true);
+    this.parseSchema();
+  }
+
+  private void parseSchema() {
+    String sourceFile = props.getString(Config.SOURCE_SCHEMA_FILE_PROP);
     try {
       this.sourceSchema = new Schema.Parser().parse(this.fs.open(new Path(sourceFile)));
       if (props.containsKey(Config.TARGET_SCHEMA_FILE_PROP)) {
@@ -78,5 +84,10 @@ public class FilebasedSchemaProvider extends SchemaProvider {
     } else {
       return super.getTargetSchema();
     }
+  }
+
+  @Override
+  public void refresh() {
+    parseSchema();
   }
 }

@@ -103,6 +103,10 @@
           <groupId>javax.xml.bind</groupId>
           <artifactId>*</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.glassfish</groupId>
+          <artifactId>javax.el</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
