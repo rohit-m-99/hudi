@@ -49,7 +49,6 @@ public class FilebasedSchemaProvider extends SchemaProvider {
   protected Schema sourceSchema;
 
   protected Schema targetSchema;
-  private TypedProperties props;
 
   public FilebasedSchemaProvider(TypedProperties props, JavaSparkContext jssc) {
     super(props, jssc);
@@ -60,12 +59,12 @@ public class FilebasedSchemaProvider extends SchemaProvider {
   }
 
   private void parseSchema() {
-    String sourceFile = props.getString(Config.SOURCE_SCHEMA_FILE_PROP);
+    String sourceFile = config.getString(Config.SOURCE_SCHEMA_FILE_PROP);
     try {
       this.sourceSchema = new Schema.Parser().parse(this.fs.open(new Path(sourceFile)));
-      if (props.containsKey(Config.TARGET_SCHEMA_FILE_PROP)) {
+      if (config.containsKey(Config.TARGET_SCHEMA_FILE_PROP)) {
         this.targetSchema =
-            new Schema.Parser().parse(fs.open(new Path(props.getString(Config.TARGET_SCHEMA_FILE_PROP))));
+            new Schema.Parser().parse(fs.open(new Path(config.getString(Config.TARGET_SCHEMA_FILE_PROP))));
       }
     } catch (IOException ioe) {
       throw new HoodieIOException("Error reading schema", ioe);
