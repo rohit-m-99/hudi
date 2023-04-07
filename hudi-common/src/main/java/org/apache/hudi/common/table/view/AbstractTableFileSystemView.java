@@ -51,6 +51,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -237,7 +238,11 @@ public abstract class AbstractTableFileSystemView implements SyncableFileSystemV
       }
     });
 
-    Map<HoodieFileGroupId, HoodieInstant> replacedFileGroups = resultStream.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    Map<HoodieFileGroupId, HoodieInstant> replacedFileGroups = new HashMap<>();
+    resultStream.collect(Collectors.toList()).forEach(entry -> {
+      replacedFileGroups.put(entry.getKey(), entry.getValue());
+    });
+
     resetReplacedFileGroups(replacedFileGroups);
     LOG.info("Took " + hoodieTimer.endTimer() + " ms to read  " + replacedTimeline.countInstants() + " instants, "
         + replacedFileGroups.size() + " replaced file groups");
