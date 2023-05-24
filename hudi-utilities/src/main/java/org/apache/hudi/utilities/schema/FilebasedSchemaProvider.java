@@ -59,12 +59,18 @@ public class FilebasedSchemaProvider extends SchemaProvider {
   }
 
   private void parseSchema() {
+    System.out.println("Calling parse schema - Applied Intuition");
     String sourceFile = config.getString(Config.SOURCE_SCHEMA_FILE_PROP);
+    System.out.println("Calling parse schem with source: " + sourceFile + "- Applied Intuition");
     try {
+      System.out.println("Source schema is: - Applied Intuition");
       this.sourceSchema = new Schema.Parser().parse(this.fs.open(new Path(sourceFile)));
+      System.out.println(this.sourceSchema.toString(true));
       if (config.containsKey(Config.TARGET_SCHEMA_FILE_PROP)) {
+        System.out.println("Target schema is: - Applied Intuition");
         this.targetSchema =
             new Schema.Parser().parse(fs.open(new Path(config.getString(Config.TARGET_SCHEMA_FILE_PROP))));
+        System.out.println(this.targetSchema.toString(true));
       }
     } catch (IOException ioe) {
       throw new HoodieIOException("Error reading schema", ioe);

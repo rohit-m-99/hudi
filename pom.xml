@@ -1161,6 +1161,10 @@
   </dependencyManagement>
   <repositories>
     <repository>
+      <id>conjars</id>
+      <url>https://repository.cloudera.com/artifactory/public/</url>
+    </repository>
+    <repository>
       <id>Maven Central</id>
       <name>Maven Repository</name>
       <url>https://repo.maven.apache.org/maven2</url>

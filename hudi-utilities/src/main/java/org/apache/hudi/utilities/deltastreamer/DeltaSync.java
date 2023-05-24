@@ -298,6 +298,10 @@ public class DeltaSync implements Serializable {
 
     // Refresh Timeline
     refreshTimeline();
+
+    LOG.error("Calling userProvidedSchemaProvider.refresh() ...");
+    LOG.error(userProvidedSchemaProvider.getClass().getSimpleName());
+    
     userProvidedSchemaProvider.refresh();
 
     Pair<SchemaProvider, Pair<String, JavaRDD<HoodieRecord>>> srcRecordsWithCkpt = readFromSource(commitTimelineOpt);
@@ -413,6 +417,7 @@ public class DeltaSync implements Serializable {
   }
 
   private Pair<SchemaProvider, Pair<String, JavaRDD<HoodieRecord>>> fetchFromSource(Option<String> resumeCheckpointStr) {
+    LOG.error("fetchFromSource -- Applied Intuition")
     final Option<JavaRDD<GenericRecord>> avroRDDOptional;
     final String checkpointStr;
     SchemaProvider schemaProvider;
@@ -428,6 +433,9 @@ public class DeltaSync implements Serializable {
       checkpointStr = dataAndCheckpoint.getCheckpointForNextBatch();
       boolean reconcileSchema = props.getBoolean(DataSourceWriteOptions.RECONCILE_SCHEMA().key());
       if (this.userProvidedSchemaProvider != null && this.userProvidedSchemaProvider.getTargetSchema() != null) {
+	LOG.error("fetchFromSource transformer branch avro schema is:")
+        System.out.println(this.userProvidedSchemaProvider.getSourceSchema().toString(true));
+        System.out.println(this.userProvidedSchemaProvider.getTargetSchema().toString(true));
         // If the target schema is specified through Avro schema,
         // pass in the schema for the Row-to-Avro conversion
         // to avoid nullability mismatch between Avro schema and Row schema
@@ -461,6 +469,9 @@ public class DeltaSync implements Serializable {
       }
     } else {
       // Pull the data from the source & prepare the write
+      LOG.error("NON-TRANSFORMER-BRANCH " + schemaProvider.getClass().getSimpleName() + " - Applied Intuition");
+      LOG.error("fetchFromSource non-transformer branch avro schema is:")
+      System.out.println(this.userProvidedSchemaProvider.getSourceSchema().toString(true));
       InputBatch<JavaRDD<GenericRecord>> dataAndCheckpoint =
           formatAdapter.fetchNewDataInAvroFormat(resumeCheckpointStr, cfg.sourceLimit);
       avroRDDOptional = dataAndCheckpoint.getBatch();
