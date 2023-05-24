@@ -30,6 +30,8 @@ import org.apache.hudi.utilities.sources.JsonSource;
 import org.apache.hudi.utilities.sources.RowSource;
 import org.apache.hudi.utilities.sources.Source;
 import org.apache.hudi.utilities.sources.helpers.AvroConvertor;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -46,6 +48,8 @@ import static org.apache.hudi.utilities.schema.RowBasedSchemaProvider.HOODIE_REC
  */
 public final class SourceFormatAdapter {
 
+  private static final Logger LOG = LogManager.getLogger(SourceFormatAdapter.class);
+
   private final Source source;
 
   public SourceFormatAdapter(Source source) {
@@ -58,6 +62,7 @@ public final class SourceFormatAdapter {
   public InputBatch<JavaRDD<GenericRecord>> fetchNewDataInAvroFormat(Option<String> lastCkptStr, long sourceLimit) {
     switch (source.getSourceType()) {
       case AVRO:
+        LOG.error("INSIDE AVRO case in SourceFormatAdapter - Applied Intuition");
         return ((AvroSource) source).fetchNext(lastCkptStr, sourceLimit);
       case JSON: {
         InputBatch<JavaRDD<String>> r = ((JsonSource) source).fetchNext(lastCkptStr, sourceLimit);

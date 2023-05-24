@@ -22,6 +22,8 @@ import org.apache.hudi.ApiMaturityLevel;
 import org.apache.hudi.PublicAPIClass;
 import org.apache.hudi.PublicAPIMethod;
 import org.apache.hudi.common.config.TypedProperties;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import org.apache.avro.Schema;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -34,6 +36,8 @@ import java.io.Serializable;
  */
 @PublicAPIClass(maturity = ApiMaturityLevel.STABLE)
 public abstract class SchemaProvider implements Serializable {
+
+  private static final Logger LOG = LogManager.getLogger(SchemaProvider.class);
 
   protected TypedProperties config;
 
@@ -58,6 +62,6 @@ public abstract class SchemaProvider implements Serializable {
   }
 
   public void refresh() {
-
+    LOG.error("INSIDE PARENT SchemaProvider's refresh() - Applied Intuition");
   }
 }

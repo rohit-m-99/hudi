@@ -27,6 +27,8 @@ import org.apache.avro.Schema;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -35,6 +37,8 @@ import java.util.Collections;
  * A simple schema provider, that reads off files on DFS.
  */
 public class FilebasedSchemaProvider extends SchemaProvider {
+
+  private static final Logger LOG = LogManager.getLogger(FilebasedSchemaProvider.class);
 
   /**
    * Configs supported.
@@ -55,22 +59,23 @@ public class FilebasedSchemaProvider extends SchemaProvider {
     DataSourceUtils.checkRequiredProperties(props, Collections.singletonList(Config.SOURCE_SCHEMA_FILE_PROP));
     String sourceFile = props.getString(Config.SOURCE_SCHEMA_FILE_PROP);
     this.fs = FSUtils.getFs(sourceFile, jssc.hadoopConfiguration(), true);
+    LOG.error("Calling parseSchema From CONSTRUCTOR - Applied Intuition");
     this.parseSchema();
   }
 
   private void parseSchema() {
-    System.out.println("Calling parse schema - Applied Intuition");
+    LOG.error("Inside parseSchema - Applied Intuition");
     String sourceFile = config.getString(Config.SOURCE_SCHEMA_FILE_PROP);
-    System.out.println("Calling parse schem with source: " + sourceFile + "- Applied Intuition");
+    LOG.error("Source Schema File: " + sourceFile + " - Applied Intuition");
     try {
-      System.out.println("Source schema is: - Applied Intuition");
+      LOG.error("Source Schema: - Applied Intuition");
       this.sourceSchema = new Schema.Parser().parse(this.fs.open(new Path(sourceFile)));
-      System.out.println(this.sourceSchema.toString(true));
+      LOG.error(this.sourceSchema.toString(true));
       if (config.containsKey(Config.TARGET_SCHEMA_FILE_PROP)) {
-        System.out.println("Target schema is: - Applied Intuition");
+        LOG.error("Target Schema: - Applied Intuition");
         this.targetSchema =
             new Schema.Parser().parse(fs.open(new Path(config.getString(Config.TARGET_SCHEMA_FILE_PROP))));
-        System.out.println(this.targetSchema.toString(true));
+        LOG.error(this.targetSchema.toString(true));
       }
     } catch (IOException ioe) {
       throw new HoodieIOException("Error reading schema", ioe);
@@ -93,6 +98,7 @@ public class FilebasedSchemaProvider extends SchemaProvider {
 
   @Override
   public void refresh() {
+    LOG.error("INSIDE FileBasedSchemaProvider's refresh() - Applied Intuition");
     parseSchema();
   }
 }
