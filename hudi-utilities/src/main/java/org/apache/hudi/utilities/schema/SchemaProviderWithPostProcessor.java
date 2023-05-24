@@ -20,11 +20,15 @@ package org.apache.hudi.utilities.schema;
 
 import org.apache.avro.Schema;
 import org.apache.hudi.common.util.Option;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 /**
  * A schema provider which applies schema post process hook on schema.
  */
 public class SchemaProviderWithPostProcessor extends SchemaProvider {
+
+  private static final Logger LOG = LogManager.getLogger(SchemaProviderWithPostProcessor.class);
 
   private final SchemaProvider schemaProvider;
   private final Option<SchemaPostProcessor> schemaPostProcessor;
@@ -34,6 +38,9 @@ public class SchemaProviderWithPostProcessor extends SchemaProvider {
     super(null, null);
     this.schemaProvider = schemaProvider;
     this.schemaPostProcessor = schemaPostProcessor;
+
+    LOG.error("INTERNAL schemaProvider Class: " + this.schemaProvider.getClass().getSimpleName()
+        + " - Applied Intuition");
   }
 
   @Override
@@ -46,6 +53,12 @@ public class SchemaProviderWithPostProcessor extends SchemaProvider {
   public Schema getTargetSchema() {
     return schemaPostProcessor.map(processor -> processor.processSchema(schemaProvider.getTargetSchema()))
         .orElse(schemaProvider.getTargetSchema());
+  }
+
+  @Override
+  public void refresh() {
+    LOG.error("INSIDE SchemaProviderWithPostProcessor's refresh() - Applied Intuition");
+    schemaProvider.refresh();
   }
 
   public SchemaProvider getOriginalSchemaProvider() {
