@@ -73,6 +73,7 @@ public class FilebasedSchemaProvider extends SchemaProvider {
       this.targetSchema = readAvroSchemaFromFile(
           getStringWithAltKeys(this.props, FilebasedSchemaProviderConfig.TARGET_SCHEMA_FILE),
           this.fs, this.shouldSanitize, this.invalidCharMask);
+    }
   }
 
   @Override
