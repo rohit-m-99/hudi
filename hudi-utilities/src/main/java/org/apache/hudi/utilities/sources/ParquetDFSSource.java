@@ -52,6 +52,6 @@ public class ParquetDFSSource extends RowSource {
   }
 
   private Dataset<Row> fromFiles(String pathStr) {
-    return sparkSession.read().parquet(pathStr.split(","));
+    return sparkSession.read().option("mergeSchema", "true").parquet(pathStr.split(","));
   }
 }

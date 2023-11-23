@@ -51,4 +51,9 @@ public class SchemaProviderWithPostProcessor extends SchemaProvider {
   public SchemaProvider getOriginalSchemaProvider() {
     return schemaProvider;
   }
+
+  @Override
+  public void refresh() {
+    schemaProvider.refresh();
+  }
 }

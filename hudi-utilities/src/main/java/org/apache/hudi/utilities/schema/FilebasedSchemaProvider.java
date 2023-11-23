@@ -49,19 +49,35 @@ public class FilebasedSchemaProvider extends SchemaProvider {
 
   protected Schema targetSchema;
 
+  private String sourceFile;
+
+  private boolean shouldSanitize;
+
+  private String invalidCharMask;
+
+  private TypedProperties props;
+
   public FilebasedSchemaProvider(TypedProperties props, JavaSparkContext jssc) {
     super(props, jssc);
     checkRequiredConfigProperties(props, Collections.singletonList(FilebasedSchemaProviderConfig.SOURCE_SCHEMA_FILE));
-    String sourceFile = getStringWithAltKeys(props, FilebasedSchemaProviderConfig.SOURCE_SCHEMA_FILE);
-    boolean shouldSanitize = SanitizationUtils.getShouldSanitize(props);
-    String invalidCharMask = SanitizationUtils.getInvalidCharMask(props);
+    this.sourceFile = getStringWithAltKeys(props, FilebasedSchemaProviderConfig.SOURCE_SCHEMA_FILE);
+    this.shouldSanitize = SanitizationUtils.getShouldSanitize(props);
+    this.invalidCharMask = SanitizationUtils.getInvalidCharMask(props);
     this.fs = FSUtils.getFs(sourceFile, jssc.hadoopConfiguration(), true);
-    this.sourceSchema = readAvroSchemaFromFile(sourceFile, this.fs, shouldSanitize, invalidCharMask);
-    if (containsConfigProperty(props, FilebasedSchemaProviderConfig.TARGET_SCHEMA_FILE)) {
+    this.parseSchema();
+  }
+
+  private void parseSchema() {
+    this.sourceSchema = readAvroSchemaFromFile(this.sourceFile, this.fs, this.shouldSanitize, this.invalidCharMask);
+    if (containsConfigProperty(this.props, FilebasedSchemaProviderConfig.TARGET_SCHEMA_FILE)) {
       this.targetSchema = readAvroSchemaFromFile(
-          getStringWithAltKeys(props, FilebasedSchemaProviderConfig.TARGET_SCHEMA_FILE),
-          this.fs, shouldSanitize, invalidCharMask);
-    }
+          getStringWithAltKeys(this.props, FilebasedSchemaProviderConfig.TARGET_SCHEMA_FILE),
+          this.fs, this.shouldSanitize, this.invalidCharMask);
+  }
+
+  @Override
+  public void refresh() {
+    parseSchema();
   }
 
   @Override

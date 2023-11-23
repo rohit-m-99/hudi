@@ -445,6 +445,8 @@ public class StreamSync implements Serializable, Closeable {
 
       result = writeToSink(instantTime, recordsFromSource,
           srcRecordsWithCkpt.getRight().getLeft(), metrics, overallTimerContext);
+      // [Applied Intuition] Refresh schema provider after writing to sink to get the latest schema.
+      schemaProvider.refresh();
     }
 
     metrics.updateStreamerSyncMetrics(System.currentTimeMillis());
